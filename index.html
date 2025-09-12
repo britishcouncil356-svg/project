@@ -1,0 +1,1120 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة صيانة الأجهزة</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #0a1d37, #1e3a8a);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://www.transparenttextures.com/patterns/circuit-pattern.png') repeat;
+            opacity: 0.1;
+            z-index: 0;
+        }
+        .sidebar {
+            width: 280px;
+            background: rgba(44, 62, 80, 0.95);
+            position: fixed;
+            height: 100%;
+            padding: 30px 20px;
+            transition: width 0.4s ease, transform 0.4s ease;
+            z-index: 100;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
+            right: 0;
+        }
+        .sidebar.closed {
+            width: 0;
+            transform: translateX(280px);
+            padding: 0;
+            overflow: hidden;
+        }
+        .sidebar h2 {
+            text-align: center;
+            color: #00c4cc;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .sidebar ul {
+            list-style: none;
+        }
+        .sidebar ul li {
+            margin: 25px 0;
+        }
+        .sidebar ul li a {
+            color: #a3c2ff;
+            text-decoration: none;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            transition: all 0.3s ease;
+        }
+        .sidebar ul li a:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            transform: translateX(-10px);
+        }
+        .sidebar ul li a i {
+            margin-right: 10px;
+        }
+        .menu-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #3498db;
+            color: #fff;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 101;
+            font-size: 1.5rem;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+            transition: background 0.3s ease;
+        }
+        .menu-toggle:hover {
+            background: #2980b9;
+        }
+        .main-content {
+            margin-right: 280px;
+            padding: 40px;
+            min-height: 100vh;
+            transition: margin-right 0.4s ease;
+            position: relative;
+            z-index: 1;
+        }
+        .main-content.full {
+            margin-right: 0;
+        }
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            color: #00c4cc;
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #00c4cc;
+        }
+        .header .date-time {
+            font-size: 1.1rem;
+            color: #a3c2ff;
+        }
+        .section {
+            display: none;
+            background: rgba(30, 58, 138, 0.7);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00c4cc;
+            font-weight: 500;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        input:focus, select:focus, textarea:focus {
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 196, 204, 0.5);
+        }
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        button {
+            background: #00c4cc;
+            color: #fff;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #00a1a7;
+        }
+        .devices-table, .users-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+            margin-top: 20px;
+        }
+        .devices-table th, .devices-table td, .users-table th, .users-table td {
+            padding: 15px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        .devices-table th, .users-table th {
+            background: #3498db;
+            color: #fff;
+            text-transform: uppercase;
+        }
+        .devices-table td button, .users-table td button {
+            padding: 8px 15px;
+            margin: 0 5px;
+            font-size: 0.9rem;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: rgba(30, 58, 138, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.8rem;
+            color: #fff;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .close:hover {
+            color: #e74c3c;
+        }
+        .error {
+            color: #e74c3c;
+            margin-top: 10px;
+            display: none;
+            font-size: 0.9rem;
+        }
+        .search-bar {
+            margin-bottom: 20px;
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 1rem;
+        }
+        .search-bar input:focus {
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 196, 204, 0.5);
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 250px;
+            }
+            .sidebar.closed {
+                transform: translateX(250px);
+            }
+            .main-content {
+                margin-right: 250px;
+            }
+            .main-content.full {
+                margin-right: 0;
+            }
+            .modal-content {
+                width: 90%;
+                max-height: 70vh;
+            }
+        }
+        @media (max-width: 480px) {
+            .menu-toggle {
+                display: block;
+            }
+            .sidebar {
+                transform: translateX(0);
+            }
+            .sidebar.closed {
+                transform: translateX(250px);
+            }
+            .main-content {
+                margin-right: 250px;
+            }
+            .main-content.full {
+                margin-right: 0;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+            .modal-content {
+                width: 95%;
+                max-height: 65vh;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleSidebar()">✖</button>
+    <div class="sidebar" id="sidebar">
+        <h2>لوحة التحكم</h2>
+        <ul>
+            <li><a href="#" onclick="showSection('dashboard');"><i>🏠</i> الرئيسية</a></li>
+            <li><a href="#" onclick="showSection('add-device');"><i>➕</i> إضافة جهاز</a></li>
+            <li><a href="#" onclick="showSection('devices');"><i>📋</i> قائمة الأجهزة</a></li>
+            <li><a href="#" onclick="showSection('reports');"><i>📊</i> التقارير</a></li>
+            <li><a href="#" onclick="showSection('settings');"><i>⚙️</i> الإعدادات</a></li>
+            <li><a href="#" onclick="logout()"><i>🚪</i> تسجيل الخروج</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <div class="header">
+            <h1>نظام إدارة صيانة الأجهزة</h1>
+            <div class="date-time" id="dateTime"></div>
+        </div>
+
+        <!-- قسم الرئيسية -->
+        <div id="dashboard" class="section active">
+            <h2>لوحة التحكم</h2>
+            <p>مرحبًا بك في نظام إدارة صيانة الأجهزة المستقبلي. استكشف الأقسام لإدارة عملك بكفاءة.</p>
+            <div class="stats">
+                <div class="stat-card">الأجهزة المسجلة: <span id="totalDevices">0</span></div>
+                <div class="stat-card">الإيرادات الإجمالية: <span id="totalRevenue">0</span> جنيه</div>
+                <div class="stat-card">المبلغ المتبقي الإجمالي: <span id="totalRemaining">0</span> جنيه</div>
+            </div>
+        </div>
+
+        <!-- قسم إضافة جهاز -->
+        <div id="add-device" class="section">
+            <h2>إضافة جهاز جديد</h2>
+            <form id="addDeviceForm">
+                <div class="form-group">
+                    <label for="deviceName">اسم الجهاز:</label>
+                    <input type="text" id="deviceName" name="deviceName" required>
+                </div>
+                <div class="form-group">
+                    <label for="customerName">اسم العميل:</label>
+                    <input type="text" id="customerName" name="customerName" required>
+                </div>
+                <div class="form-group">
+                    <label for="issue">وصف العطل:</label>
+                    <textarea id="issue" name="issue" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="contact">رقم التواصل:</label>
+                    <input type="tel" id="contact" name="contact" required placeholder="مثال: 01012345678">
+                </div>
+                <div class="form-group">
+                    <label for="price">سعر الصيانة (جنيه):</label>
+                    <input type="number" id="price" name="price" required step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="paidAmount">المبلغ المدفوع (جنيه):</label>
+                    <input type="number" id="paidAmount" name="paidAmount" required step="0.01" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="status">حالة الجهاز:</label>
+                    <select id="status" name="status" required>
+                        <option value="في الانتظار">في الانتظار</option>
+                        <option value="تحت الصيانة">تحت الصيانة</option>
+                        <option value="مكتمل">مكتمل</option>
+                    </select>
+                </div>
+                <button type="submit">حفظ الجهاز</button>
+            </form>
+        </div>
+
+        <!-- قسم قائمة الأجهزة -->
+        <div id="devices" class="section">
+            <h2>قائمة الأجهزة</h2>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="ابحث عن جهاز (اسم، عميل، رقم تواصل)">
+            </div>
+            <table class="devices-table">
+                <thead>
+                    <tr>
+                        <th>الجهاز</th>
+                        <th>العميل</th>
+                        <th>العطل</th>
+                        <th>التواصل</th>
+                        <th>سعر الصيانة</th>
+                        <th>المدفوع</th>
+                        <th>المتبقي</th>
+                        <th>التاريخ</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="devicesList"></tbody>
+            </table>
+        </div>
+
+        <!-- قسم التقارير -->
+        <div id="reports" class="section">
+            <h2>التقارير</h2>
+            <div class="report-card">
+                <h3>إحصائيات اليوم</h3>
+                <p>عدد الأجهزة: <span id="dailyDevices">0</span></p>
+                <p>الإيرادات: <span id="dailyRevenue">0</span> جنيه</p>
+                <p>المبلغ المتبقي: <span id="dailyRemaining">0</span> جنيه</p>
+            </div>
+            <button onclick="exportReport()">تصدير تقرير PDF</button>
+        </div>
+
+        <!-- قسم الإعدادات -->
+        <div id="settings" class="section">
+            <h2>الإعدادات</h2>
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label for="shopName">اسم المتجر:</label>
+                    <input type="text" id="shopName" name="shopName" value="مركز عادل للصيانة">
+                </div>
+                <div class="form-group">
+                    <label for="shopContact">رقم المتجر:</label>
+                    <input type="tel" id="shopContact" name="shopContact" value="01012345678">
+                </div>
+                <div class="form-group">
+                    <label for="theme">الثيم:</label>
+                    <select id="theme" name="theme">
+                        <option value="default">افتراضي</option>
+                        <option value="dark">داكن</option>
+                        <option value="light">فاتح</option>
+                    </select>
+                </div>
+                <button type="submit">حفظ الإعدادات</button>
+            </form>
+            <h3>إدارة المستخدمين</h3>
+            <form id="addUserForm">
+                <div class="form-group">
+                    <label for="newUsername">اسم المستخدم الجديد:</label>
+                    <input type="text" id="newUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">كلمة المرور:</label>
+                    <input type="password" id="newPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="newRole">الصلاحية:</label>
+                    <select id="newRole" required>
+                        <option value="admin">أدمن</option>
+                        <option value="user">مستخدم</option>
+                    </select>
+                </div>
+                <button type="submit">إضافة مستخدم</button>
+            </form>
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>اسم المستخدم</th>
+                        <th>الصلاحية</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="usersList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal for Invoice -->
+    <div id="invoiceModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeInvoice()">&times;</span>
+            <div id="invoiceContent"></div>
+            <button onclick="downloadInvoicePDF()">تحميل الفاتورة كـ PDF</button>
+        </div>
+    </div>
+
+    <!-- Modal for Login -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>تسجيل الدخول</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">اسم المستخدم:</label>
+                    <input type="text" id="username" name="username" required placeholder="أدخل اسم المستخدم">
+                </div>
+                <div class="form-group">
+                    <label for="password">كلمة المرور:</label>
+                    <input type="password" id="password" name="password" required placeholder="أدخل كلمة المرور">
+                </div>
+                <button type="submit">تسجيل الدخول</button>
+                <p id="errorMessage" class="error">اسم المستخدم أو كلمة المرور غير صحيحة!</p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Editing Device -->
+    <div id="editDeviceModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditDeviceModal()">&times;</span>
+            <h2>تعديل جهاز</h2>
+            <form id="editDeviceForm">
+                <div class="form-group">
+                    <label for="editDeviceId">معرف الجهاز:</label>
+                    <input type="text" id="editDeviceId" name="editDeviceId" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="editDeviceName">اسم الجهاز:</label>
+                    <input type="text" id="editDeviceName" name="editDeviceName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCustomerName">اسم العميل:</label>
+                    <input type="text" id="editCustomerName" name="editCustomerName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editIssue">وصف العطل:</label>
+                    <textarea id="editIssue" name="editIssue" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editContact">رقم التواصل:</label>
+                    <input type="tel" id="editContact" name="editContact" required placeholder="مثال: 01012345678">
+                </div>
+                <div class="form-group">
+                    <label for="editPrice">سعر الصيانة (جنيه):</label>
+                    <input type="number" id="editPrice" name="editPrice" required step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="editPaidAmount">المبلغ المدفوع (جنيه):</label>
+                    <input type="number" id="editPaidAmount" name="editPaidAmount" required step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="editStatus">حالة الجهاز:</label>
+                    <select id="editStatus" name="editStatus" required>
+                        <option value="في الانتظار">في الانتظار</option>
+                        <option value="تحت الصيانة">تحت الصيانة</option>
+                        <option value="مكتمل">مكتمل</option>
+                    </select>
+                </div>
+                <button type="submit">حفظ التعديلات</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let devices = JSON.parse(localStorage.getItem('devices')) || [];
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+        let shopName = localStorage.getItem('shopName') || "مركز عادل للصيانة";
+        let shopContact = localStorage.getItem('shopContact') || "01012345678";
+        let theme = localStorage.getItem('theme') || "default";
+        let currentInvoiceDevice = null;
+
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function initUsers() {
+            if (users.length === 0) {
+                const defaultPassword = await hashPassword("admin123");
+                users.push({ username: "admin", password: defaultPassword, role: "admin" });
+                localStorage.setItem('users', JSON.stringify(users));
+            }
+        }
+
+        // وظيفة التحكم في القائمة الجانبية
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const toggleButton = document.querySelector('.menu-toggle');
+            sidebar.classList.toggle('closed');
+            mainContent.classList.toggle('full');
+            if (sidebar.classList.contains('closed')) {
+                toggleButton.textContent = '☰';
+            } else {
+                toggleButton.textContent = '✖';
+            }
+        }
+
+        // عرض القسم
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => section.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+        }
+
+        // إضافة جهاز
+        document.getElementById('addDeviceForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (currentUser.role !== 'admin') {
+                alert('ليس لديك صلاحية لإضافة جهاز!');
+                return;
+            }
+            const deviceName = document.getElementById('deviceName').value;
+            const customerName = document.getElementById('customerName').value;
+            const issue = document.getElementById('issue').value;
+            const contact = document.getElementById('contact').value;
+            const price = parseFloat(document.getElementById('price').value);
+            const paidAmount = parseFloat(document.getElementById('paidAmount').value);
+            const status = document.getElementById('status').value;
+            const currentDate = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' });
+
+            if (deviceName && customerName && issue && contact && !isNaN(price) && !isNaN(paidAmount)) {
+                if (paidAmount > price) {
+                    alert('المبلغ المدفوع لا يمكن أن يكون أكبر من سعر الصيانة!');
+                    return;
+                }
+                const device = {
+                    id: Date.now(),
+                    name: deviceName,
+                    customer: customerName,
+                    issue: issue,
+                    contact: contact,
+                    price: price,
+                    paidAmount: paidAmount,
+                    remainingAmount: price - paidAmount,
+                    date: currentDate,
+                    status: status
+                };
+                devices.push(device);
+                localStorage.setItem('devices', JSON.stringify(devices));
+                updateDeviceList();
+                updateStats();
+                this.reset();
+                alert('تم إضافة الجهاز بنجاح!');
+            } else {
+                alert('يرجى ملء جميع الحقول بشكل صحيح!');
+            }
+        });
+
+        // تحديث قائمة الأجهزة
+        function updateDeviceList(searchTerm = '') {
+            const devicesList = document.getElementById('devicesList');
+            devicesList.innerHTML = '';
+            const filteredDevices = searchTerm
+                ? devices.filter(device =>
+                    device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    device.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    device.contact.includes(searchTerm)
+                )
+                : devices;
+            filteredDevices.forEach(device => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${device.name}</td>
+                    <td>${device.customer}</td>
+                    <td>${device.issue}</td>
+                    <td>${device.contact}</td>
+                    <td>${device.price.toFixed(2)} جنيه</td>
+                    <td>${device.paidAmount.toFixed(2)} جنيه</td>
+                    <td>${device.remainingAmount.toFixed(2)} جنيه</td>
+                    <td>${device.date}</td>
+                    <td>${device.status}</td>
+                    <td>
+                        <button onclick="generateInvoice(${device.id})">فاتورة</button>
+                        ${currentUser.role === 'admin' ? `<button onclick="editDevice(${device.id})">تعديل</button>` : ''}
+                        ${currentUser.role === 'admin' ? `<button onclick="deleteDevice(${device.id})">حذف</button>` : ''}
+                    </td>
+                `;
+                devicesList.appendChild(row);
+            });
+        }
+
+        // تعديل جهاز
+        function editDevice(id) {
+            if (currentUser.role !== 'admin') {
+                alert('ليس لديك صلاحية لتعديل جهاز!');
+                return;
+            }
+            const device = devices.find(d => d.id === id);
+            if (device) {
+                document.getElementById('editDeviceId').value = device.id;
+                document.getElementById('editDeviceName').value = device.name;
+                document.getElementById('editCustomerName').value = device.customer;
+                document.getElementById('editIssue').value = device.issue;
+                document.getElementById('editContact').value = device.contact;
+                document.getElementById('editPrice').value = device.price;
+                document.getElementById('editPaidAmount').value = device.paidAmount;
+                document.getElementById('editStatus').value = device.status;
+                document.getElementById('editDeviceModal').style.display = 'flex';
+            }
+        }
+
+        // حفظ تعديلات الجهاز
+        document.getElementById('editDeviceForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('editDeviceId').value);
+            const deviceName = document.getElementById('editDeviceName').value;
+            const customerName = document.getElementById('editCustomerName').value;
+            const issue = document.getElementById('editIssue').value;
+            const contact = document.getElementById('editContact').value;
+            const price = parseFloat(document.getElementById('editPrice').value);
+            const paidAmount = parseFloat(document.getElementById('editPaidAmount').value);
+            const status = document.getElementById('editStatus').value;
+
+            if (deviceName && customerName && issue && contact && !isNaN(price) && !isNaN(paidAmount)) {
+                if (paidAmount > price) {
+                    alert('المبلغ المدفوع لا يمكن أن يكون أكبر من سعر الصيانة!');
+                    return;
+                }
+                const deviceIndex = devices.findIndex(d => d.id === id);
+                devices[deviceIndex] = {
+                    ...devices[deviceIndex],
+                    name: deviceName,
+                    customer: customerName,
+                    issue: issue,
+                    contact: contact,
+                    price: price,
+                    paidAmount: paidAmount,
+                    remainingAmount: price - paidAmount,
+                    status: status
+                };
+                localStorage.setItem('devices', JSON.stringify(devices));
+                updateDeviceList();
+                updateStats();
+                closeEditDeviceModal();
+                alert('تم تعديل الجهاز بنجاح!');
+            } else {
+                alert('يرجى ملء جميع الحقول بشكل صحيح!');
+            }
+        });
+
+        // إغلاق نافذة تعديل الجهاز
+        function closeEditDeviceModal() {
+            document.getElementById('editDeviceModal').style.display = 'none';
+        }
+
+        // البحث في الأجهزة
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchTerm = this.value.trim();
+            updateDeviceList(searchTerm);
+        });
+
+        // حذف جهاز
+        function deleteDevice(id) {
+            devices = devices.filter(device => device.id !== id);
+            localStorage.setItem('devices', JSON.stringify(devices));
+            updateDeviceList();
+            updateStats();
+            alert('تم حذف الجهاز بنجاح!');
+        }
+
+        // إصدار فاتورة
+        function generateInvoice(id) {
+            const device = devices.find(d => d.id === id);
+            if (device) {
+                currentInvoiceDevice = device;
+                const invoiceContent = `
+                    <h2>فاتورة صيانة - ${shopName}</h2>
+                    <p><strong>رقم المتجر:</strong> ${shopContact}</p>
+                    <p><strong>اسم الجهاز:</strong> ${device.name}</p>
+                    <p><strong>اسم العميل:</strong> ${device.customer}</p>
+                    <p><strong>وصف العطل:</strong> ${device.issue}</p>
+                    <p><strong>رقم التواصل:</strong> ${device.contact}</p>
+                    <p><strong>سعر الصيانة:</strong> ${device.price.toFixed(2)} جنيه</p>
+                    <p><strong>المبلغ المدفوع:</strong> ${device.paidAmount.toFixed(2)} جنيه</p>
+                    <p><strong>المبلغ المتبقي:</strong> ${device.remainingAmount.toFixed(2)} جنيه</p>
+                    <p><strong>التاريخ:</strong> ${device.date}</p>
+                    <p><strong>الحالة:</strong> ${device.status}</p>
+                    <p>شكراً لاختياركم خدماتنا!</p>
+                `;
+                document.getElementById('invoiceContent').innerHTML = invoiceContent;
+                document.getElementById('invoiceModal').style.display = 'flex';
+            }
+        }
+
+        // تحميل فاتورة كـ PDF
+        function downloadInvoicePDF() {
+            if (!currentInvoiceDevice) {
+                alert('لا يوجد جهاز محدد لإصدار الفاتورة!');
+                return;
+            }
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                // تحميل ملف الخط من المجلد
+                const fontUrl = 'Amiri-Regular.ttf'; // مسار نسبي، يفترض أن الملف في نفس المجلد
+                fetch(fontUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('فشل التحميل: تأكد من وجود Amiri-Regular.ttf في نفس المجلد');
+                        return response.arrayBuffer();
+                    })
+                    .then(fontData => {
+                        const fontUint8Array = new Uint8Array(fontData);
+                        doc.addFileToVFS('Amiri-Regular.ttf', fontUint8Array);
+                        doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+                        doc.setFont('Amiri');
+                        doc.setFontSize(16);
+
+                        // إعدادات المحاذاة من اليمين إلى اليسار
+                        const pageWidth = doc.internal.pageSize.width;
+                        const xRight = pageWidth - 10;
+                        const yStart = 20;
+
+                        // كتابة النصوص
+                        doc.text(`فاتورة صيانة - ${shopName}`, xRight, yStart, { align: 'right' });
+                        doc.text(`رقم المتجر: ${shopContact}`, xRight, yStart + 10, { align: 'right' });
+                        doc.text(`اسم الجهاز: ${currentInvoiceDevice.name}`, xRight, yStart + 20, { align: 'right' });
+                        doc.text(`اسم العميل: ${currentInvoiceDevice.customer}`, xRight, yStart + 30, { align: 'right' });
+                        doc.text(`وصف العطل: ${currentInvoiceDevice.issue}`, xRight, yStart + 40, { align: 'right' });
+                        doc.text(`رقم التواصل: ${currentInvoiceDevice.contact}`, xRight, yStart + 50, { align: 'right' });
+                        doc.text(`سعر الصيانة: ${currentInvoiceDevice.price.toFixed(2)} جنيه`, xRight, yStart + 60, { align: 'right' });
+                        doc.text(`المبلغ المدفوع: ${currentInvoiceDevice.paidAmount.toFixed(2)} جنيه`, xRight, yStart + 70, { align: 'right' });
+                        doc.text(`المبلغ المتبقي: ${currentInvoiceDevice.remainingAmount.toFixed(2)} جنيه`, xRight, yStart + 80, { align: 'right' });
+                        doc.text(`التاريخ: ${currentInvoiceDevice.date}`, xRight, yStart + 90, { align: 'right' });
+                        doc.text(`الحالة: ${currentInvoiceDevice.status}`, xRight, yStart + 100, { align: 'right' });
+                        doc.text('شكراً لاختياركم خدماتنا!', xRight, yStart + 110, { align: 'right' });
+
+                        doc.save(`فاتورة_${currentInvoiceDevice.id}.pdf`);
+                    })
+                    .catch(error => {
+                        console.error('خطأ أثناء تحميل ملف الخط:', error);
+                        alert('حدث خطأ أثناء تحميل ملف الخط Amiri-Regular.ttf. تأكد من وجوده في نفس المجلد.');
+                    });
+            } catch (error) {
+                console.error('خطأ أثناء إنشاء الفاتورة PDF:', error);
+                alert('حدث خطأ أثناء إنشاء الفاتورة.');
+            }
+        }
+
+        // إغلاق الفاتورة
+        function closeInvoice() {
+            document.getElementById('invoiceModal').style.display = 'none';
+            currentInvoiceDevice = null;
+        }
+
+        // تحديث الإحصائيات
+        function updateStats() {
+            document.getElementById('totalDevices').textContent = devices.length;
+            const totalRevenue = devices.reduce((sum, device) => sum + device.paidAmount, 0);
+            document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2);
+            const totalRemaining = devices.reduce((sum, device) => sum + device.remainingAmount, 0);
+            document.getElementById('totalRemaining').textContent = totalRemaining.toFixed(2);
+            const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
+            const dailyDevices = devices.filter(d => d.date.includes(today)).length;
+            const dailyRevenue = devices.filter(d => d.date.includes(today)).reduce((sum, d) => sum + d.paidAmount, 0);
+            const dailyRemaining = devices.filter(d => d.date.includes(today)).reduce((sum, d) => sum + d.remainingAmount, 0);
+            document.getElementById('dailyDevices').textContent = dailyDevices;
+            document.getElementById('dailyRevenue').textContent = dailyRevenue.toFixed(2);
+            document.getElementById('dailyRemaining').textContent = dailyRemaining.toFixed(2);
+        }
+
+        // تصدير تقرير PDF
+        function exportReport() {
+            if (currentUser.role !== 'admin') {
+                alert('ليس لديك صلاحية لتصدير التقارير!');
+                return;
+            }
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                // تحميل ملف الخط من المجلد
+                const fontUrl = 'Amiri-Regular.ttf'; // مسار نسبي
+                fetch(fontUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('فشل التحميل: تأكد من وجود Amiri-Regular.ttf في نفس المجلد');
+                        return response.arrayBuffer();
+                    })
+                    .then(fontData => {
+                        const fontUint8Array = new Uint8Array(fontData);
+                        doc.addFileToVFS('Amiri-Regular.ttf', fontUint8Array);
+                        doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+                        doc.setFont('Amiri');
+
+                        doc.setFontSize(16);
+                        const pageWidth = doc.internal.pageSize.width;
+                        const xRight = pageWidth - 10;
+
+                        doc.text(`تقرير يومي - ${shopName}`, xRight, 20, { align: 'right' });
+                        doc.setFontSize(12);
+                        doc.text(`التاريخ: ${new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' })}`, xRight, 30, { align: 'right' });
+                        doc.text(`عدد الأجهزة: ${document.getElementById('dailyDevices').textContent}`, xRight, 40, { align: 'right' });
+                        doc.text(`الإيرادات: ${document.getElementById('dailyRevenue').textContent} جنيه`, xRight, 50, { align: 'right' });
+                        doc.text(`المبلغ المتبقي: ${document.getElementById('dailyRemaining').textContent} جنيه`, xRight, 60, { align: 'right' });
+
+                        // إضافة جدول الأجهزة
+                        const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
+                        const dailyDevices = devices.filter(d => d.date.includes(today)).map(d => [
+                            d.name,
+                            d.customer,
+                            d.issue,
+                            d.contact,
+                            `${d.price.toFixed(2)} جنيه`,
+                            `${d.paidAmount.toFixed(2)} جنيه`,
+                            `${d.remainingAmount.toFixed(2)} جنيه`,
+                            d.date,
+                            d.status
+                        ]);
+
+                        const head = [['الحالة', 'التاريخ', 'المتبقي', 'المدفوع', 'سعر الصيانة', 'التواصل', 'العطل', 'العميل', 'الجهاز']];
+                        const body = dailyDevices.map(row => row.slice().reverse());
+
+                        doc.autoTable({
+                            head: head,
+                            body: body,
+                            startY: 70,
+                            styles: { font: 'Amiri', halign: 'right', fontSize: 10, cellPadding: 2 },
+                            headStyles: { fillColor: [52, 152, 219], halign: 'center' },
+                            margin: { right: 10, left: 10 }
+                        });
+
+                        doc.save(`تقرير_يومي_${today}.pdf`);
+                    })
+                    .catch(error => {
+                        console.error('خطأ أثناء تحميل ملف الخط:', error);
+                        alert('حدث خطأ أثناء تحميل ملف الخط Amiri-Regular.ttf. تأكد من وجوده في نفس المجلد.');
+                    });
+            } catch (error) {
+                console.error('خطأ أثناء إنشاء التقرير PDF:', error);
+                alert('حدث خطأ أثناء إنشاء التقرير.');
+            }
+        }
+
+        // حفظ الإعدادات
+        document.getElementById('settingsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            shopName = document.getElementById('shopName').value;
+            shopContact = document.getElementById('shopContact').value;
+            theme = document.getElementById('theme').value;
+            localStorage.setItem('shopName', shopName);
+            localStorage.setItem('shopContact', shopContact);
+            localStorage.setItem('theme', theme);
+            applyTheme();
+            alert('تم حفظ الإعدادات بنجاح!');
+        });
+
+        // تطبيق الثيم
+        function applyTheme() {
+            if (theme === 'dark') {
+                document.body.style.background = 'linear-gradient(135deg, #1a2a44, #2e4a7e)';
+            } else if (theme === 'light') {
+                document.body.style.background = 'linear-gradient(135deg, #e0e7ff, #c7d2fe)';
+                document.querySelectorAll('input, select, textarea').forEach(el => el.style.color = '#333');
+            } else {
+                document.body.style.background = 'linear-gradient(135deg, #0a1d37, #1e3a8a)';
+                document.querySelectorAll('input, select, textarea').forEach(el => el.style.color = '#fff');
+            }
+        }
+
+        // تحديث التاريخ والوقت
+        function updateDateTime() {
+            const now = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+            document.getElementById('dateTime').textContent = `اليوم: ${now}`;
+        }
+
+        // تقييد الوصول بناءً على الدور
+        function restrictAccess(role) {
+            if (role !== 'admin') {
+                document.querySelector('a[onclick="showSection(\'add-device\')"]').parentElement.style.display = 'none';
+                document.querySelector('a[onclick="showSection(\'reports\')"]').parentElement.style.display = 'none';
+                document.querySelector('a[onclick="showSection(\'settings\')"]').parentElement.style.display = 'none';
+                document.getElementById('add-device').style.display = 'none';
+                document.getElementById('reports').style.display = 'none';
+                document.getElementById('settings').style.display = 'none';
+            }
+        }
+
+        // تسجيل الخروج
+        function logout() {
+            localStorage.removeItem('currentUser');
+            currentUser = null;
+            document.getElementById('loginModal').style.display = 'flex';
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('sidebar').style.display = 'none';
+            document.querySelector('.menu-toggle').style.display = 'none';
+        }
+
+        // إضافة مستخدم جديد
+        document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const newUsername = document.getElementById('newUsername').value.trim();
+            const newPassword = document.getElementById('newPassword').value;
+            const newRole = document.getElementById('newRole').value;
+            if (users.find(u => u.username === newUsername)) {
+                alert('اسم المستخدم موجود بالفعل!');
+                return;
+            }
+            const hashedPassword = await hashPassword(newPassword);
+            users.push({ username: newUsername, password: hashedPassword, role: newRole });
+            localStorage.setItem('users', JSON.stringify(users));
+            updateUsersList();
+            this.reset();
+            alert('تم إضافة المستخدم بنجاح!');
+        });
+
+        // تحديث قائمة المستخدمين
+        function updateUsersList() {
+            const usersList = document.getElementById('usersList');
+            usersList.innerHTML = '';
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.username}</td>
+                    <td>${user.role === 'admin' ? 'أدمن' : 'مستخدم'}</td>
+                    <td>
+                        <button onclick="deleteUser('${user.username}')">حذف</button>
+                    </td>
+                `;
+                usersList.appendChild(row);
+            });
+        }
+
+        // حذف مستخدم
+        function deleteUser(username) {
+            if (username === 'admin') {
+                alert('لا يمكن حذف الأدمن الافتراضي!');
+                return;
+            }
+            if (username === currentUser.username) {
+                alert('لا يمكن حذف حسابك الحالي!');
+                return;
+            }
+            users = users.filter(u => u.username !== username);
+            localStorage.setItem('users', JSON.stringify(users));
+            updateUsersList();
+            alert('تم حذف المستخدم بنجاح!');
+        }
+
+        // تسجيل الدخول
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const hashedPassword = await hashPassword(password);
+            const user = users.find(u => u.username === username && u.password === hashedPassword);
+            const errorMessage = document.getElementById('errorMessage');
+            if (user) {
+                currentUser = { username: user.username, role: user.role };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                document.getElementById('sidebar').style.display = 'block';
+                document.querySelector('.menu-toggle').style.display = 'block';
+                restrictAccess(user.role);
+                updateDeviceList();
+                updateStats();
+                if (currentUser.role === 'admin') {
+                    updateUsersList();
+                }
+                showSection('dashboard');
+                errorMessage.style.display = 'none';
+            } else {
+                errorMessage.style.display = 'block';
+            }
+        });
+
+        // تحديث عند التحميل
+        window.addEventListener('load', async () => {
+            await initUsers();
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
+            applyTheme();
+            document.getElementById('shopName').value = shopName;
+            document.getElementById('shopContact').value = shopContact;
+            document.getElementById('theme').value = theme;
+            if (!currentUser) {
+                document.getElementById('loginModal').style.display = 'flex';
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('sidebar').style.display = 'none';
+                document.querySelector('.menu-toggle').style.display = 'none';
+            } else {
+                restrictAccess(currentUser.role);
+                updateDeviceList();
+                updateStats();
+                if (currentUser.role === 'admin') {
+                    updateUsersList();
+                }
+                showSection('dashboard');
+            }
+        });
+    </script>
+</body>
+</html>
