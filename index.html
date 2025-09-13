@@ -292,6 +292,12 @@
             margin-bottom: 20px;
             color: #00c4cc;
         }
+        .danger-button {
+            background: #e74c3c;
+        }
+        .danger-button:hover {
+            background: #c0392b;
+        }
         @media (max-width: 768px) {
             .sidebar {
                 width: 250px;
@@ -487,7 +493,7 @@
 
         async function updateDeviceList(searchTerm = '') {
             const devicesList = document.getElementById('devicesList');
-            console.log('Updating device list with devices:', devices);
+            console.log('Updating device list with search term:', searchTerm);
             if (devicesList) {
                 devicesList.innerHTML = '';
                 let filteredDevices = devices.filter(device => {
@@ -527,6 +533,35 @@
                 }
             } else {
                 console.error('Devices list element not found');
+            }
+        }
+
+        function resetSearch() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                updateDeviceList('');
+                console.log('Search reset');
+            } else {
+                console.error('Search input element not found');
+            }
+        }
+
+        async function deleteAllDevices() {
+            if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لحذف جميع الأجهزة!');
+            if (confirm('هل أنت متأكد من حذف جميع الأجهزة؟ هذا الإجراء لا يمكن التراجع عنه!')) {
+                try {
+                    const devicesSnapshot = await getDocs(collection(db, 'devices'));
+                    const deletePromises = devicesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+                    await Promise.all(deletePromises);
+                    devices = [];
+                    updateDeviceList();
+                    updateStats();
+                    alert('تم حذف جميع الأجهزة بنجاح!');
+                } catch (error) {
+                    console.error('Error deleting all devices:', error);
+                    alert('حدث خطأ أثناء حذف جميع الأجهزة.');
+                }
             }
         }
 
@@ -602,8 +637,11 @@
             if (searchInput) {
                 searchInput.addEventListener('input', () => {
                     updateDeviceList(searchInput.value.trim());
+                    console.log('Search input changed:', searchInput.value);
                 });
                 searchInput.value = '';
+            } else {
+                console.error('Search input element not found');
             }
         }
 
@@ -693,14 +731,12 @@
 
         function updateStats() {
             console.log('Updating stats with devices:', devices);
-            // Total stats
             document.getElementById('totalDevices').textContent = devices.length;
             const totalRevenue = devices.reduce((sum, device) => sum + (device.paidAmount || 0), 0);
             document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2);
             const totalRemaining = devices.reduce((sum, device) => sum + (device.remainingAmount || 0), 0);
             document.getElementById('totalRemaining').textContent = totalRemaining.toFixed(2);
 
-            // Daily stats
             const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
             const dailyDevices = devices.filter(d => d.date?.includes(today));
             const dailyDeviceCount = dailyDevices.length;
@@ -710,7 +746,6 @@
             document.getElementById('dailyRevenue').textContent = dailyRevenue.toFixed(2);
             document.getElementById('dailyRemaining').textContent = dailyRemaining.toFixed(2);
 
-            // Monthly stats
             const currentMonth = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', month: 'long', year: 'numeric' });
             const monthlyDevices = devices.filter(d => d.date?.includes(currentMonth.split(' ')[0]));
             const monthlyDeviceCount = monthlyDevices.length;
@@ -720,7 +755,6 @@
             document.getElementById('monthlyRevenue').textContent = monthlyRevenue.toFixed(2);
             document.getElementById('monthlyRemaining').textContent = monthlyRemaining.toFixed(2);
 
-            // Update reports section tables
             updateReportsTables();
         }
 
@@ -728,7 +762,6 @@
             const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
             const currentMonth = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', month: 'long', year: 'numeric' }).split(' ')[0];
 
-            // Daily devices table
             const dailyDevicesList = document.getElementById('dailyDevicesList');
             if (dailyDevicesList) {
                 dailyDevicesList.innerHTML = '';
@@ -756,7 +789,6 @@
                 }
             }
 
-            // Monthly devices table
             const monthlyDevicesList = document.getElementById('monthlyDevicesList');
             if (monthlyDevicesList) {
                 monthlyDevicesList.innerHTML = '';
@@ -972,7 +1004,7 @@
                 const sidebar = document.getElementById('sidebar');
                 const menuToggle = document.querySelector('.menu-toggle');
                 if (loginModal) loginModal.style.display = 'flex';
-                if (sidebar) sidebar.classList.add('closed');
+                if (sidebar) sidebar.getElementsByClassName('closed');
                 if (menuToggle) menuToggle.style.display = 'none';
                 document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
                 const loginForm = document.getElementById('loginForm');
@@ -1103,6 +1135,7 @@
                 if (currentUser?.role === 'admin') {
                     const usersSnapshot = await getDocs(collection(db, 'users'));
                     users = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+                    updateUsersList();
                 }
                 const settingsDoc = await getDoc(doc(db, 'settings', 'shop'));
                 if (settingsDoc.exists()) {
@@ -1177,6 +1210,8 @@
         window.exportMonthlyReport = exportMonthlyReport;
         window.logout = logout;
         window.deleteUser = deleteUser;
+        window.resetSearch = resetSearch;
+        window.deleteAllDevices = deleteAllDevices;
     </script>
 </head>
 <body>
@@ -1285,7 +1320,7 @@
             <h2>قائمة الأجهزة</h2>
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="ابحث عن جهاز (اسم، عميل، رقم تواصل)">
-                <button onclick="document.getElementById('searchInput').value = ''; updateDeviceList('');">إعادة تعيين</button>
+                <button onclick="resetSearch()">إعادة تعيين البحث</button>
             </div>
             <table class="devices-table">
                 <thead>
@@ -1400,6 +1435,8 @@
                 </div>
                 <button type="submit">إضافة مستخدم</button>
             </form>
+            <h3>إدارة الأجهزة</h3>
+            <button class="danger-button" onclick="deleteAllDevices()">حذف جميع الأجهزة</button>
             <table class="users-table">
                 <thead>
                     <tr>
@@ -1421,6 +1458,49 @@
         </div>
     </div>
 
+    <div id="editDeviceModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditDeviceModal()">&times;</span>
+            <h2>تعديل جهاز</h2>
+            <form id="editDeviceForm">
+                <input type="hidden" id="editDeviceId">
+                <div class="form-group">
+                    <label for="editDeviceName">اسم الجهاز:</label>
+                    <input type="text" id="editDeviceName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editCustomerName">اسم العميل:</label>
+                    <input type="text" id="editCustomerName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editIssue">وصف العطل:</label>
+                    <textarea id="editIssue" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editContact">رقم التواصل:</label>
+                    <input type="tel" id="editContact" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPrice">سعر الصيانة (جنيه):</label>
+                    <input type="number" id="editPrice" required step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="editPaidAmount">المبلغ المدفوع (جنيه):</label>
+                    <input type="number" id="editPaidAmount" required step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="editStatus">حالة الجهاز:</label>
+                    <select id="editStatus" required>
+                        <option value="في الانتظار">في الانتظار</option>
+                        <option value="تحت الصيانة">تحت الصيانة</option>
+                        <option value="مكتمل">مكتمل</option>
+                    </select>
+                </div>
+                <button type="submit">حفظ التعديلات</button>
+            </form>
+        </div>
+    </div>
+
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <h2>تسجيل الدخول</h2>
@@ -1431,56 +1511,10 @@
                 </div>
                 <div class="form-group">
                     <label for="password">كلمة المرور:</label>
-                    <input type="password" id="password" name="password" required placeholder="أدخل كلمة المرور">
+                    <input type="password" id="password" name="password" required>
                 </div>
                 <button type="submit">تسجيل الدخول</button>
-                <p id="errorMessage" class="error">اسم المستخدم أو كلمة المرور غير صحيحة!</p>
-            </form>
-        </div>
-    </div>
-
-    <div id="editDeviceModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeEditDeviceModal()">&times;</span>
-            <h2>تعديل جهاز</h2>
-            <form id="editDeviceForm">
-                <div class="form-group">
-                    <label for="editDeviceId">معرف الجهاز:</label>
-                    <input type="text" id="editDeviceId" name="editDeviceId" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="editDeviceName">اسم الجهاز:</label>
-                    <input type="text" id="editDeviceName" name="editDeviceName" required>
-                </div>
-                <div class="form-group">
-                    <label for="editCustomerName">اسم العميل:</label>
-                    <input type="text" id="editCustomerName" name="editCustomerName" required>
-                </div>
-                <div class="form-group">
-                    <label for="editIssue">وصف العطل:</label>
-                    <textarea id="editIssue" name="editIssue" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="editContact">رقم التواصل:</label>
-                    <input type="tel" id="editContact" name="editContact" required placeholder="مثال: 01012345678">
-                </div>
-                <div class="form-group">
-                    <label for="editPrice">سعر الصيانة (جنيه):</label>
-                    <input type="number" id="editPrice" name="editPrice" required step="0.01" min="0">
-                </div>
-                <div class="form-group">
-                    <label for="editPaidAmount">المبلغ المدفوع (جنيه):</label>
-                    <input type="number" id="editPaidAmount" name="editPaidAmount" required step="0.01" min="0">
-                </div>
-                <div class="form-group">
-                    <label for="editStatus">حالة الجهاز:</label>
-                    <select id="editStatus" name="editStatus" required>
-                        <option value="في الانتظار">في الانتظار</option>
-                        <option value="تحت الصيانة">تحت الصيانة</option>
-                        <option value="مكتمل">مكتمل</option>
-                    </select>
-                </div>
-                <button type="submit">حفظ التعديلات</button>
+                <div class="error" id="errorMessage">اسم المستخدم أو كلمة المرور غير صحيحة</div>
             </form>
         </div>
     </div>
