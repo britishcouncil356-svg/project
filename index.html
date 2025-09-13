@@ -440,8 +440,24 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Base64-encoded Amiri font for jsPDF (يجب استبداله بقيمة base64 حقيقية)
-        const amiriFontBase64 = 'data:application/font-ttf;base64,...'; // استبدل بقيمة base64 لخط Amiri
+        // دالة لجلب سلسلة Base64 من ملف encoded-20250913181023.txt
+        async function loadAmiriFontBase64() {
+            try {
+                const response = await fetch('./encoded-20250913181023.txt');
+                if (!response.ok) {
+                    throw new Error(`فشل في جلب ملف الخط: ${response.statusText}`);
+                }
+                let base64String = await response.text();
+                // إزالة البادئة إذا كانت موجودة
+                base64String = base64String.replace(/^data:application\/font-ttf;base64,/, '');
+                // إضافة البادئة المطلوبة لـ jsPDF
+                return `data:application/font-ttf;base64,${base64String.trim()}`;
+            } catch (error) {
+                console.error('خطأ في جلب ملف الخط:', error);
+                alert('حدث خطأ في جلب خط Amiri. يرجى التأكد من وجود الملف.');
+                return null;
+            }
+        }
 
         let devices = [];
         let users = [];
@@ -730,12 +746,14 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             try {
+                const amiriFontBase64 = await loadAmiriFontBase64();
+                if (!amiriFontBase64) return;
                 doc.addFileToVFS('amiri-regular.ttf', amiriFontBase64);
                 doc.addFont('amiri-regular.ttf', 'Amiri', 'normal');
                 doc.setFont('Amiri');
             } catch (error) {
                 console.error('خطأ في تحميل الخط:', error);
-                alert('حدث خطأ في تحميل خط Amiri. يرجى التأكد من توفر الخط.');
+                alert('حدث خطأ في تحميل خط Amiri. يرجى التأكد من وجود الملف.');
                 return;
             }
             doc.setFontSize(16);
@@ -857,12 +875,14 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             try {
+                const amiriFontBase64 = await loadAmiriFontBase64();
+                if (!amiriFontBase64) return;
                 doc.addFileToVFS('amiri-regular.ttf', amiriFontBase64);
                 doc.addFont('amiri-regular.ttf', 'Amiri', 'normal');
                 doc.setFont('Amiri');
             } catch (error) {
                 console.error('خطأ في تحميل الخط:', error);
-                alert('حدث خطأ في تحميل خط Amiri. يرجى التأكد من توفر الخط.');
+                alert('حدث خطأ في تحميل خط Amiri. يرجى التأكد من وجود الملف.');
                 return;
             }
             doc.setFontSize(16);
@@ -911,12 +931,14 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             try {
+                const amiriFontBase64 = await loadAmiriFontBase64();
+                if (!amiriFontBase64) return;
                 doc.addFileToVFS('amiri-regular.ttf', amiriFontBase64);
                 doc.addFont('amiri-regular.ttf', 'Amiri', 'normal');
                 doc.setFont('Amiri');
             } catch (error) {
                 console.error('خطأ في تحميل الخط:', error);
-                alert('حدث خطأ في تحميل خط Amiri. يرجى التأكد من توفر الخط.');
+                alert('حدث خطأ في تحميل خط Amiri. يرجى التأكد من وجود الملف.');
                 return;
             }
             doc.setFontSize(16);
@@ -1100,8 +1122,6 @@
             if (uid === auth.currentUser?.uid) return alert('لا يمكن حذف حسابك الحالي!');
             if (confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
                 try {
-                    // ملاحظة: حذف المستخدم في Firebase Auth يتطلب Admin SDK أو إعادة مصادقة
-                    // يجب التعامل مع هذا عبر الخادم للأمان
                     await deleteDoc(doc(db, 'users', uid));
                     users = users.filter(u => u.uid !== uid);
                     updateUsersList();
@@ -1496,7 +1516,7 @@
                     <button type="submit">تسجيل الدخول</button>
                     <p class="error" id="errorMessage">اسم المستخدم أو كلمة المرور غير صحيحة!</p>
                 </form>
-                            </form>
+                
             </div>
         </div>
 
