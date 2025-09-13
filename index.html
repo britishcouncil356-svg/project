@@ -17,6 +17,7 @@
             min-height: 100vh;
             overflow-x: hidden;
             position: relative;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
         }
         body::before {
             content: '';
@@ -30,74 +31,76 @@
             z-index: 0;
         }
         .sidebar {
-            width: 280px;
+            width: clamp(15%, 20vw, 20%);
             background: rgba(44, 62, 80, 0.95);
             position: fixed;
-            height: 100%;
-            padding: 30px 20px;
-            transition: width 0.4s ease, transform 0.4s ease;
+            height: 100vh;
+            padding: 2vw;
+            transition: transform 0.4s ease, width 0.4s ease;
             z-index: 100;
-            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
             right: 0;
+            box-shadow: -0.5vw 0 1vw rgba(0, 0, 0, 0.3);
         }
         .sidebar.closed {
+            transform: translateX(100%);
             width: 0;
-            transform: translateX(280px);
             padding: 0;
             overflow: hidden;
         }
         .sidebar h2 {
             text-align: center;
             color: #00c4cc;
-            margin-bottom: 40px;
+            margin-bottom: 3vh;
+            font-size: clamp(1.5rem, 3vw, 2rem);
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 0.1em;
         }
         .sidebar ul {
             list-style: none;
         }
         .sidebar ul li {
-            margin: 25px 0;
+            margin: 2vh 0;
         }
         .sidebar ul li a {
             color: #a3c2ff;
             text-decoration: none;
-            font-size: 1.2rem;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
             display: flex;
             align-items: center;
-            padding: 10px 15px;
+            padding: 1vh 1vw;
             transition: all 0.3s ease;
         }
         .sidebar ul li a:hover {
             color: #fff;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            transform: translateX(-10px);
+            border-radius: 0.5rem;
+            transform: translateX(-0.5vw);
         }
         .sidebar ul li a i {
-            margin-right: 10px;
+            margin-right: 0.5vw;
+            font-size: clamp(1rem, 2vw, 1.2rem);
         }
         .menu-toggle {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 2vh;
+            right: 2vw;
             background: #3498db;
             color: #fff;
             border: none;
-            padding: 12px 18px;
+            padding: 1vh 1vw;
             border-radius: 50%;
             cursor: pointer;
             z-index: 101;
-            font-size: 1.5rem;
-            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            box-shadow: 0 0 1vw rgba(52, 152, 219, 0.5);
             transition: background 0.3s ease;
         }
         .menu-toggle:hover {
             background: #2980b9;
         }
         .main-content {
-            margin-right: 280px;
-            padding: 40px;
+            margin-right: clamp(15%, 20vw, 20%);
+            padding: clamp(2vh, 3vw, 3vh);
             min-height: 100vh;
             transition: margin-right 0.4s ease;
             position: relative;
@@ -108,30 +111,32 @@
         }
         .header {
             background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(0.5rem);
+            padding: 2vh 2vw;
+            border-radius: 1rem;
+            margin-bottom: 2vh;
+            box-shadow: 0 0.5vh 1.5vh rgba(0, 0, 0, 0.2);
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
+            gap: 1vw;
         }
         .header h1 {
             color: #00c4cc;
-            font-size: 2.5rem;
-            text-shadow: 0 0 10px #00c4cc;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            text-shadow: 0 0 0.5rem #00c4cc;
         }
         .header .date-time {
-            font-size: 1.1rem;
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
             color: #a3c2ff;
         }
         .section {
             display: none;
             background: rgba(30, 58, 138, 0.7);
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            padding: 2vh 2vw;
+            border-radius: 1rem;
+            box-shadow: 0 0.5vh 2vh rgba(0, 0, 0, 0.4);
             animation: fadeIn 0.5s ease-in-out;
         }
         .section.active {
@@ -142,41 +147,42 @@
             to { opacity: 1; transform: scale(1); }
         }
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 2vh;
         }
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 0.5vh;
             color: #00c4cc;
             font-weight: 500;
+            font-size: clamp(0.9rem, 2vw, 1rem);
         }
         input, select, textarea {
             width: 100%;
-            padding: 12px;
+            padding: 1vh 1vw;
             border: none;
-            border-radius: 10px;
+            border-radius: 0.5rem;
             background: rgba(255, 255, 255, 0.2);
             color: #fff;
-            font-size: 1rem;
+            font-size: clamp(0.9rem, 2vw, 1rem);
             transition: all 0.3s ease;
         }
         input:focus, select:focus, textarea:focus {
             background: rgba(255, 255, 255, 0.3);
             outline: none;
-            box-shadow: 0 0 10px rgba(0, 196, 204, 0.5);
+            box-shadow: 0 0 0.5rem rgba(0, 196, 204, 0.5);
         }
         textarea {
-            height: 120px;
+            height: 15vh;
             resize: vertical;
         }
         button {
             background: #00c4cc;
             color: #fff;
-            padding: 12px 25px;
+            padding: 1vh 2vw;
             border: none;
-            border-radius: 25px;
+            border-radius: 1.5rem;
             cursor: pointer;
-            font-size: 1.1rem;
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
             transition: background 0.3s ease;
         }
         button:hover {
@@ -185,16 +191,17 @@
         .devices-table, .users-table, .stats-table {
             width: 100%;
             border-collapse: separate;
-            border-spacing: 0 10px;
-            margin-top: 20px;
+            border-spacing: 0 1vh;
+            margin-top: 2vh;
             overflow-x: auto;
             display: block;
         }
         .devices-table th, .devices-table td, .users-table th, .users-table td, .stats-table th, .stats-table td {
-            padding: 15px;
+            padding: 1vh 1vw;
             text-align: center;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+            border-radius: 0.5rem;
+            font-size: clamp(0.8rem, 1.8vw, 0.9rem);
         }
         .devices-table th, .users-table th, .stats-table th {
             background: #3498db;
@@ -202,9 +209,9 @@
             text-transform: uppercase;
         }
         .devices-table td button, .users-table td button {
-            padding: 8px 15px;
-            margin: 0 5px;
-            font-size: 0.9rem;
+            padding: 0.8vh 1.5vw;
+            margin: 0 0.5vw;
+            font-size: clamp(0.8rem, 1.8vw, 0.9rem);
         }
         .modal {
             display: none;
@@ -215,26 +222,25 @@
             height: 100%;
             background: rgba(0, 0, 0, 0.7);
             z-index: 1000;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(0.3rem);
             justify-content: center;
             align-items: center;
         }
         .modal-content {
             background: rgba(30, 58, 138, 0.9);
-            padding: 25px;
-            border-radius: 15px;
-            width: 80%;
-            max-width: 600px;
+            padding: 2vh 2vw;
+            border-radius: 1rem;
+            width: clamp(70%, 80vw, 90%);
             max-height: 80vh;
             overflow-y: auto;
             position: relative;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0.5vh 2vh rgba(0, 0, 0, 0.5);
         }
         .close {
             position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 1.8rem;
+            top: 1vh;
+            right: 1vw;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
             color: #fff;
             cursor: pointer;
             transition: color 0.3s;
@@ -244,57 +250,58 @@
         }
         .error {
             color: #e74c3c;
-            margin-top: 10px;
+            margin-top: 1vh;
             display: none;
-            font-size: 0.9rem;
+            font-size: clamp(0.8rem, 1.8vw, 0.9rem);
         }
         .search-bar {
-            margin-bottom: 20px;
+            margin-bottom: 2vh;
             display: flex;
-            gap: 10px;
+            gap: 1vw;
             flex-wrap: wrap;
         }
         .search-bar input {
             flex: 1;
-            min-width: 200px;
-            padding: 12px;
-            border-radius: 10px;
+            min-width: clamp(150px, 30vw, 200px);
+            padding: 1vh 1vw;
+            border-radius: 0.5rem;
             background: rgba(255, 255, 255, 0.2);
             color: #fff;
-            font-size: 1rem;
+            font-size: clamp(0.9rem, 2vw, 1rem);
         }
         .search-bar input:focus {
             background: rgba(255, 255, 255, 0.3);
-            box-shadow: 0 0 10px rgba(0, 196, 204, 0.5);
+            box-shadow: 0 0 0.5rem rgba(0, 196, 204, 0.5);
         }
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(clamp(200px, 25vw, 250px), 1fr));
+            gap: 2vh;
+            margin-top: 2vh;
         }
         .stat-card {
             background: rgba(255, 255, 255, 0.15);
-            padding: 20px;
-            border-radius: 15px;
+            padding: 2vh 2vw;
+            border-radius: 1rem;
             text-align: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0.5vh 1.5vh rgba(0, 0, 0, 0.2);
             transition: transform 0.3s ease;
         }
         .stat-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-0.5vh);
         }
         .stat-card span {
-            font-size: 1.5rem;
+            font-size: clamp(1.2rem, 2.5vw, 1.5rem);
             color: #00c4cc;
             font-weight: bold;
         }
         .report-section {
-            margin-top: 30px;
+            margin-top: 2vh;
         }
         .report-section h3 {
-            margin-bottom: 20px;
+            margin-bottom: 2vh;
             color: #00c4cc;
+            font-size: clamp(1.2rem, 2.5vw, 1.5rem);
         }
         .danger-button {
             background: #e74c3c;
@@ -304,55 +311,26 @@
         }
         @media (max-width: 1024px) {
             .sidebar {
-                width: 250px;
-            }
-            .sidebar.closed {
-                transform: translateX(250px);
+                width: clamp(20%, 25vw, 25%);
             }
             .main-content {
-                margin-right: 250px;
+                margin-right: clamp(20%, 25vw, 25%);
             }
             .main-content.full {
                 margin-right: 0;
             }
             .stats {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            }
-        }
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 250px;
-                transform: translateX(250px);
-            }
-            .sidebar.closed {
-                transform: translateX(250px);
-            }
-            .menu-toggle {
-                display: block;
-            }
-            .main-content {
-                margin-right: 0;
-                padding: 20px;
+                grid-template-columns: repeat(auto-fit, minmax(clamp(180px, 22vw, 200px), 1fr));
             }
             .header {
                 flex-direction: column;
                 text-align: center;
             }
             .header h1 {
-                font-size: 2rem;
-            }
-            .stats {
-                grid-template-columns: 1fr;
-            }
-            .devices-table, .stats-table, .users-table {
-                overflow-x: auto;
-            }
-            .modal-content {
-                width: 90%;
-                max-height: 70vh;
+                font-size: clamp(1.5rem, 3.5vw, 2rem);
             }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
                 transform: translateX(100%);
@@ -360,25 +338,75 @@
             .sidebar.closed {
                 transform: translateX(100%);
             }
-            .main-content {
-                padding: 15px;
+            .menu-toggle {
+                display: block;
+                top: 1.5vh;
+                right: 1.5vw;
             }
-            .header h1 {
-                font-size: 1.8rem;
+            .main-content {
+                margin-right: 0;
+                padding: 1.5vh 1.5vw;
+            }
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            .devices-table, .stats-table, .users-table {
+                font-size: clamp(0.7rem, 1.6vw, 0.8rem);
+            }
+            .modal-content {
+                width: 95%;
+                max-height: 70vh;
+                padding: 1.5vh 1.5vw;
             }
             .form-group input, .form-group select, .form-group textarea {
-                font-size: 0.9rem;
+                font-size: clamp(0.8rem, 1.8vw, 0.9rem);
+            }
+        }
+        @media (max-width: 480px) {
+            body {
+                font-size: clamp(0.8rem, 2vw, 0.9rem);
+            }
+            .sidebar {
+                width: 100%;
+                transform: translateX(100%);
+            }
+            .main-content {
+                padding: 1vh 1vw;
+            }
+            .header h1 {
+                font-size: clamp(1.2rem, 3vw, 1.8rem);
             }
             .search-bar {
                 flex-direction: column;
             }
+            .search-bar input {
+                min-width: 100%;
+            }
             .modal-content {
-                width: 95%;
+                width: 98%;
                 max-height: 65vh;
+                padding: 1vh 1vw;
             }
             .devices-table th, .devices-table td {
-                padding: 10px;
-                font-size: 0.8rem;
+                padding: 0.5vh 0.5vw;
+                font-size: clamp(0.7rem, 1.5vw, 0.8rem);
+            }
+            .stat-card {
+                padding: 1.5vh 1.5vw;
+            }
+            .stat-card span {
+                font-size: clamp(1rem, 2vw, 1.2rem);
+            }
+        }
+        @media (min-width: 1200px) {
+            .sidebar {
+                width: clamp(15%, 18vw, 18%);
+            }
+            .main-content {
+                margin-right: clamp(15%, 18vw, 18%);
+            }
+            .stats {
+                grid-template-columns: repeat(auto-fit, minmax(clamp(250px, 20vw, 300px), 1fr));
             }
         }
     </style>
@@ -477,6 +505,8 @@
                 updateDeviceList();
             } else if (sectionId === 'reports') {
                 updateStats();
+            } else if (sectionId === 'users') {
+                updateUsersList();
             }
         }
 
@@ -531,7 +561,6 @@
 
         async function updateDeviceList(searchTerm = '') {
             const devicesList = document.getElementById('devicesList');
-            console.log('Updating device list with search term:', searchTerm);
             if (devicesList) {
                 devicesList.innerHTML = '';
                 let filteredDevices = devices.filter(device => {
@@ -542,7 +571,6 @@
                            customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            contact.includes(searchTerm);
                 });
-                console.log('Filtered devices:', filteredDevices);
                 if (filteredDevices.length === 0) {
                     const row = document.createElement('tr');
                     row.innerHTML = `<td colspan="10">لا توجد أجهزة لعرضها</td>`;
@@ -563,7 +591,7 @@
                             <td>
                                 <button onclick="generateInvoice('${device.id}')">فاتورة</button>
                                 ${currentUser?.role === 'admin' ? `<button onclick="editDevice('${device.id}')">تعديل</button>` : ''}
-                                ${currentUser?.role === 'admin' ? `<button onclick="deleteDevice('${device.id}')">حذف</button>` : ''}
+                                ${currentUser?.role === 'admin' ? `<button class="danger-button" onclick="deleteDevice('${device.id}')">حذف</button>` : ''}
                             </td>
                         `;
                         devicesList.appendChild(row);
@@ -571,17 +599,6 @@
                 }
             } else {
                 console.error('Devices list element not found');
-            }
-        }
-
-        function resetSearch() {
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.value = '';
-                updateDeviceList('');
-                console.log('Search reset');
-            } else {
-                console.error('Search input element not found');
             }
         }
 
@@ -600,6 +617,14 @@
                     console.error('Error deleting all devices:', error);
                     alert('حدث خطأ أثناء حذف جميع الأجهزة.');
                 }
+            }
+        }
+
+        function resetSearch() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                updateDeviceList('');
             }
         }
 
@@ -675,11 +700,8 @@
             if (searchInput) {
                 searchInput.addEventListener('input', () => {
                     updateDeviceList(searchInput.value.trim());
-                    console.log('Search input changed:', searchInput.value);
                 });
                 searchInput.value = '';
-            } else {
-                console.error('Search input element not found');
             }
         }
 
@@ -768,7 +790,6 @@
         }
 
         function updateStats() {
-            console.log('Updating stats with devices:', devices);
             document.getElementById('totalDevices').textContent = devices.length;
             const totalRevenue = devices.reduce((sum, device) => sum + (device.paidAmount || 0), 0);
             document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2);
@@ -1027,9 +1048,11 @@
                 document.querySelector('a[onclick="showSection(\'add-device\')"]').parentElement.style.display = 'none';
                 document.querySelector('a[onclick="showSection(\'reports\')"]').parentElement.style.display = 'none';
                 document.querySelector('a[onclick="showSection(\'settings\')"]').parentElement.style.display = 'none';
+                document.querySelector('a[onclick="showSection(\'users\')"]').parentElement.style.display = 'none';
                 document.getElementById('add-device').style.display = 'none';
                 document.getElementById('reports').style.display = 'none';
                 document.getElementById('settings').style.display = 'none';
+                document.getElementById('users').style.display = 'none';
             }
         }
 
@@ -1100,18 +1123,18 @@
                     row.innerHTML = `
                         <td>${user.username}</td>
                         <td>${user.role === 'admin' ? 'أدمن' : 'مستخدم'}</td>
-                        <td><button onclick="deleteUser('${user.uid}')">حذف</button></td>
+                        <td><button class="danger-button" onclick="deleteUser('${user.uid}')">حذف</button></td>
                     `;
                     usersList.appendChild(row);
                 });
             }
         }
 
-        function deleteUser(uid) {
+        async function deleteUser(uid) {
             if (uid === auth.currentUser?.uid) return alert('لا يمكن حذف حسابك الحالي!');
             if (confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
                 try {
-                    deleteDoc(doc(db, 'users', uid));
+                    await deleteDoc(doc(db, 'users', uid));
                     users = users.filter(u => u.uid !== uid);
                     updateUsersList();
                     alert('تم حذف المستخدم بنجاح!');
@@ -1166,9 +1189,7 @@
             try {
                 const q = query(collection(db, 'devices'), orderBy('createdAt', 'desc'));
                 const devicesSnapshot = await getDocs(q);
-                console.log('Devices Snapshot:', devicesSnapshot.docs);
                 devices = devicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log('Devices Array:', devices);
                 updateDeviceList();
                 if (currentUser?.role === 'admin') {
                     const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -1262,6 +1283,7 @@
             <li><a href="#" onclick="showSection('devices');"><i>📋</i> قائمة الأجهزة</a></li>
             <li><a href="#" onclick="showSection('reports');"><i>📊</i> التقارير</a></li>
             <li><a href="#" onclick="showSection('settings');"><i>⚙️</i> الإعدادات</a></li>
+            <li><a href="#" onclick="showSection('users');"><i>👤</i> إدارة المستخدمين</a></li>
             <li><a href="#" onclick="logout()"><i>🚪</i> تسجيل الخروج</a></li>
         </ul>
     </div>
@@ -1359,6 +1381,7 @@
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="ابحث عن جهاز (اسم، عميل، رقم تواصل)">
                 <button onclick="resetSearch()">إعادة تعيين البحث</button>
+                <button class="danger-button" onclick="deleteAllDevices()">حذف جميع الأجهزة</button>
             </div>
             <table class="devices-table">
                 <thead>
@@ -1454,106 +1477,121 @@
                 </div>
                 <button type="submit">حفظ الإعدادات</button>
             </form>
-            <h3>إدارة المستخدمين</h3>
-            <form id="addUserForm">
-                <div class="form-group">
-                    <label for="newUsername">اسم المستخدم الجديد:</label>
-                    <input type="text" id="newUsername" required>
-                </div>
-                <div class="form-group">
-                    <label for="newPassword">كلمة المرور:</label>
-                    <input type="password" id="newPassword" required>
-                </div>
-                <div class="form-group">
-                    <label for="newRole">الصلاحية:</label>
-                    <select id="newRole" required>
-                        <option value="admin">أدمن</option>
-                        <option value="user">مستخدم</option>
-                    </select>
-                </div>
-                <button type="submit">إضافة مستخدم</button>
-            </form>
-            <h3>إدارة الأجهزة</h3>
-            <button class="danger-button" onclick="deleteAllDevices()">حذف جميع الأجهزة</button>
+            <div class="report-section">
+                <h3>إدارة المستخدمين</h3>
+                <form id="addUserForm">
+                    <div class="form-group">
+                        <label for="newUsername">اسم المستخدم:</label>
+                        <input type="text" id="newUsername" name="newUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">كلمة المرور:</label>
+                        <input type="password" id="newPassword" name="newPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newRole">الدور:</label>
+                        <select id="newRole" name="newRole" required>
+                            <option value="admin">أدمن</option>
+                            <option value="user">مستخدم</option>
+                        </select>
+                    </div>
+                    <button type="submit">إضافة مستخدم</button>
+                </form>
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>اسم المستخدم</th>
+                            <th>الدور</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="users" class="section">
+            <h2>إدارة المستخدمين</h2>
             <table class="users-table">
                 <thead>
                     <tr>
                         <th>اسم المستخدم</th>
-                        <th>الصلاحية</th>
+                        <th>الدور</th>
                         <th>الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="usersList"></tbody>
             </table>
         </div>
-    </div>
 
-    <div id="invoiceModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeInvoice()">&times;</span>
-            <div id="invoiceContent"></div>
-            <button onclick="downloadInvoicePDF()">تحميل الفاتورة كـ PDF</button>
+        <div id="loginModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="document.getElementById('loginModal').style.display='none'">&times;</span>
+                <h2>تسجيل الدخول</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">اسم المستخدم:</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">كلمة المرور:</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit">تسجيل الدخول</button>
+                    <p class="error" id="errorMessage">اسم المستخدم أو كلمة المرور غير صحيحة!</p>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <div id="editDeviceModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeEditDeviceModal()">&times;</span>
-            <h2>تعديل جهاز</h2>
-            <form id="editDeviceForm">
-                <input type="hidden" id="editDeviceId">
-                <div class="form-group">
-                    <label for="editDeviceName">اسم الجهاز:</label>
-                    <input type="text" id="editDeviceName" required>
-                </div>
-                <div class="form-group">
-                    <label for="editCustomerName">اسم العميل:</label>
-                    <input type="text" id="editCustomerName" required>
-                </div>
-                <div class="form-group">
-                    <label for="editIssue">وصف العطل:</label>
-                    <textarea id="editIssue" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="editContact">رقم التواصل:</label>
-                    <input type="tel" id="editContact" required>
-                </div>
-                <div class="form-group">
-                    <label for="editPrice">سعر الصيانة (جنيه):</label>
-                    <input type="number" id="editPrice" required step="0.01" min="0">
-                </div>
-                <div class="form-group">
-                    <label for="editPaidAmount">المبلغ المدفوع (جنيه):</label>
-                    <input type="number" id="editPaidAmount" required step="0.01" min="0">
-                </div>
-                <div class="form-group">
-                    <label for="editStatus">حالة الجهاز:</label>
-                    <select id="editStatus" required>
-                        <option value="في الانتظار">في الانتظار</option>
-                        <option value="تحت الصيانة">تحت الصيانة</option>
-                        <option value="مكتمل">مكتمل</option>
-                    </select>
-                </div>
-                <button type="submit">حفظ التعديلات</button>
-            </form>
+        <div id="editDeviceModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeEditDeviceModal()">&times;</span>
+                <h2>تعديل جهاز</h2>
+                <form id="editDeviceForm">
+                    <input type="hidden" id="editDeviceId">
+                    <div class="form-group">
+                        <label for="editDeviceName">اسم الجهاز:</label>
+                        <input type="text" id="editDeviceName" name="editDeviceName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCustomerName">اسم العميل:</label>
+                        <input type="text" id="editCustomerName" name="editCustomerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editIssue">وصف العطل:</label>
+                        <textarea id="editIssue" name="editIssue" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="editContact">رقم التواصل:</label>
+                        <input type="tel" id="editContact" name="editContact" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPrice">سعر الصيانة (جنيه):</label>
+                        <input type="number" id="editPrice" name="editPrice" required step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="editPaidAmount">المبلغ المدفوع (جنيه):</label>
+                        <input type="number" id="editPaidAmount" name="editPaidAmount" required step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="editStatus">حالة الجهاز:</label>
+                        <select id="editStatus" name="editStatus" required>
+                            <option value="في الانتظار">في الانتظار</option>
+                            <option value="تحت الصيانة">تحت الصيانة</option>
+                            <option value="مكتمل">مكتمل</option>
+                        </select>
+                    </div>
+                    <button type="submit">حفظ التعديلات</button>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h2>تسجيل الدخول</h2>
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="username">اسم المستخدم:</label>
-                    <input type="text" id="username" name="username" required placeholder="أدخل اسم المستخدم">
-                </div>
-                <div class="form-group">
-                    <label for="password">كلمة المرور:</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                <button type="submit">تسجيل الدخول</button>
-                <div class="error" id="errorMessage">اسم المستخدم أو كلمة المرور غير صحيحة</div>
-            </form>
+        <div id="invoiceModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeInvoice()">&times;</span>
+                <div id="invoiceContent"></div>
+                <button onclick="downloadInvoicePDF()">تحميل الفاتورة PDF</button>
+            </div>
         </div>
     </div>
 </body>
