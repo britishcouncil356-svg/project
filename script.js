@@ -1,77 +1,38 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyCysmZUdUYEGQ3ODBoHFgo_n6WRgcSnUhs",
-    authDomain: "management-system-6afbd.firebaseapp.com",
-    projectId: "management-system-6afbd",
-    storageBucket: "management-system-6afbd.appspot.com",
-    messagingSenderId: "593129749958",
-    appId: "1:593129749958:web:886e812c9220375e5e86c7",
-    measurementId: "G-G4LNGD3G4B"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-var gk_isXlsx = false;
-var gk_xlsxFileLookup = {};
-var gk_fileData = {};
-function filledCell(cell) {
-    return cell !== '' && cell != null;
-}
-function loadFileData(filename) {
-    if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-        try {
-            var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-            var firstSheetName = workbook.SheetNames[0];
-            var worksheet = workbook.Sheets[firstSheetName];
-            var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-            var filteredData = jsonData.filter(row => row.some(filledCell));
-            var headerRowIndex = filteredData.findIndex((row, index) =>
-                row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-            );
-            if (headerRowIndex === -1 || headerRowIndex > 25) {
-                headerRowIndex = 0;
-            }
-            var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
-            csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-            return csv;
-        } catch (e) {
-            console.error(e);
-            return "";
-        }
-    }
-    return gk_fileData[filename] || "";
-}
-
+const db = getFirestore();
 let devices = [];
-let users = [];
-let currentUser = null;
 let shopName = localStorage.getItem('shopName') || "مركز عادل للصيانة";
 let shopContact = localStorage.getItem('shopContact') || "01012345678";
 let theme = localStorage.getItem('theme') || "default";
 let currentInvoiceDevice = null;
+let currentUser = null;
 
-async function initUsers() {
-    const usersSnapshot = await getDocs(collection(db, 'users'));
-    if (usersSnapshot.empty) {
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, 'admin@example.com', 'admin123');
-            await setDoc(doc(db, 'users', userCredential.user.uid), {
-                username: 'admin',
-                role: 'admin',
-                email: 'admin@example.com'
-            });
-            console.log('Default admin created');
-        } catch (error) {
-            console.error('Error creating default admin:', error);
-        }
+// دالة تهيئة التطبيق
+async function initApp() {
+    await loadDevices();
+    updateDateTime();
+    applyTheme();
+    setupAddDeviceListener();
+    setupEditDeviceListener();
+    setupSearchListener();
+    setupSettingsListener();
+}
+
+// تحميل الأجهزة من Firestore
+async function loadDevices() {
+    try {
+        const devicesSnapshot = await getDocs(query(collection(db, 'devices'), orderBy('createdAt', 'desc')));
+        devices = devicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateDeviceList();
+        updateStats();
+    } catch (error) {
+        console.error('Error loading devices:', error);
+        alert('حدث خطأ أثناء تحميل الأجهزة.');
     }
 }
 
+// تبديل القائمة الجانبية
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.getElementById('mainContent');
@@ -81,6 +42,7 @@ function toggleSidebar() {
     toggleButton.textContent = sidebar.classList.contains('closed') ? '☰' : '✖';
 }
 
+// عرض القسم المحدد
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
     document.getElementById(sectionId).classList.add('active');
@@ -88,17 +50,17 @@ function showSection(sectionId) {
         updateDeviceList();
     } else if (sectionId === 'reports') {
         updateStats();
-    } else if (sectionId === 'settings') {
-        updateUsersList();
     }
 }
 
-async function setupAddDeviceListener() {
+// إضافة جهاز جديد
+function setupAddDeviceListener() {
     const addDeviceForm = document.getElementById('addDeviceForm');
     if (addDeviceForm) {
         addDeviceForm.addEventListener('submit', async e => {
             e.preventDefault();
             if (!currentUser) return alert('يرجى تسجيل الدخول!');
+            if (currentUser.role !== 'admin') return alert('ليس لديك صلاحية لإضافة جهاز!');
             const deviceName = document.getElementById('deviceName').value;
             const customerName = document.getElementById('customerName').value;
             const issue = document.getElementById('issue').value;
@@ -142,7 +104,8 @@ async function setupAddDeviceListener() {
     }
 }
 
-async function updateDeviceList(searchTerm = '') {
+// تحديث قائمة الأجهزة
+function updateDeviceList(searchTerm = '') {
     const devicesList = document.getElementById('devicesList');
     if (devicesList) {
         devicesList.innerHTML = '';
@@ -180,11 +143,10 @@ async function updateDeviceList(searchTerm = '') {
                 devicesList.appendChild(row);
             });
         }
-    } else {
-        console.error('Devices list element not found');
     }
 }
 
+// حذف جميع الأجهزة
 async function deleteAllDevices() {
     if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لحذف جميع الأجهزة!');
     if (confirm('هل أنت متأكد من حذف جميع الأجهزة؟ هذا الإجراء لا يمكن التراجع عنه!')) {
@@ -203,6 +165,7 @@ async function deleteAllDevices() {
     }
 }
 
+// إعادة تعيين البحث
 function resetSearch() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -211,6 +174,7 @@ function resetSearch() {
     }
 }
 
+// تعديل جهاز
 function editDevice(id) {
     if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لتعديل الجهاز!');
     const device = devices.find(d => d.id === id);
@@ -227,11 +191,13 @@ function editDevice(id) {
     }
 }
 
-async function setupEditDeviceListener() {
+// معالج تعديل الجهاز
+function setupEditDeviceListener() {
     const editDeviceForm = document.getElementById('editDeviceForm');
     if (editDeviceForm) {
         editDeviceForm.addEventListener('submit', async e => {
             e.preventDefault();
+            if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لتعديل الجهاز!');
             const id = document.getElementById('editDeviceId').value;
             const deviceName = document.getElementById('editDeviceName').value;
             const customerName = document.getElementById('editCustomerName').value;
@@ -274,10 +240,12 @@ async function setupEditDeviceListener() {
     }
 }
 
+// إغلاق نافذة تعديل الجهاز
 function closeEditDeviceModal() {
     document.getElementById('editDeviceModal').style.display = 'none';
 }
 
+// معالج البحث
 function setupSearchListener() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -288,6 +256,7 @@ function setupSearchListener() {
     }
 }
 
+// حذف جهاز
 async function deleteDevice(id) {
     if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لحذف الجهاز!');
     if (confirm('هل أنت متأكد من حذف هذا الجهاز؟')) {
@@ -304,6 +273,7 @@ async function deleteDevice(id) {
     }
 }
 
+// إنشاء فاتورة
 function generateInvoice(id) {
     const device = devices.find(d => d.id === id);
     if (device) {
@@ -327,6 +297,7 @@ function generateInvoice(id) {
     }
 }
 
+// تحميل فاتورة PDF
 async function downloadInvoicePDF() {
     if (!currentInvoiceDevice) return alert('لا يوجد جهاز محدد!');
     const { jsPDF } = window.jspdf;
@@ -336,8 +307,7 @@ async function downloadInvoicePDF() {
         const response = await fetch(fontUrl);
         if (!response.ok) throw new Error('فشل تحميل الخط');
         const fontData = await response.arrayBuffer();
-        const fontUint8Array = new Uint8Array(fontData);
-        doc.addFileToVFS('amiri-regular.ttf', fontUint8Array);
+        doc.addFileToVFS('amiri-regular.ttf', fontData);
         doc.addFont('amiri-regular.ttf', 'Amiri', 'normal');
         doc.setFont('Amiri');
     } catch (error) {
@@ -367,11 +337,13 @@ async function downloadInvoicePDF() {
     doc.save(`فاتورة_${currentInvoiceDevice.id}.pdf`);
 }
 
+// إغلاق نافذة الفاتورة
 function closeInvoice() {
     document.getElementById('invoiceModal').style.display = 'none';
     currentInvoiceDevice = null;
 }
 
+// تحديث الإحصائيات
 function updateStats() {
     document.getElementById('totalDevices').textContent = devices.length;
     const totalRevenue = devices.reduce((sum, device) => sum + (device.paidAmount || 0), 0);
@@ -382,7 +354,7 @@ function updateStats() {
     const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
     const dailyDevices = devices.filter(d => d.date?.includes(today));
     const dailyDeviceCount = dailyDevices.length;
-    const dailyRevenue = dailyDevices.reduce((sum, d) => sum + (d.paidAmount || 0), 0);
+    const dailyRevenue = dailyDevices.reduce((sum, d) => sum + (d.paidAmount || 0.0), 0);
     const dailyRemaining = dailyDevices.reduce((sum, d) => sum + (d.remainingAmount || 0), 0);
     document.getElementById('dailyDevices').textContent = dailyDeviceCount;
     document.getElementById('dailyRevenue').textContent = dailyRevenue.toFixed(2);
@@ -400,6 +372,7 @@ function updateStats() {
     updateReportsTables();
 }
 
+// تحديث جداول التقارير
 function updateReportsTables() {
     const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
     const currentMonth = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', month: 'long', year: 'numeric' }).split(' ')[0];
@@ -459,6 +432,7 @@ function updateReportsTables() {
     }
 }
 
+// تصدير تقرير يومي PDF
 async function exportDailyReport() {
     if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لتصدير التقارير!');
     const { jsPDF } = window.jspdf;
@@ -468,8 +442,7 @@ async function exportDailyReport() {
         const response = await fetch(fontUrl);
         if (!response.ok) throw new Error('فشل تحميل الخط');
         const fontData = await response.arrayBuffer();
-        const fontUint8Array = new Uint8Array(fontData);
-        doc.addFileToVFS('amiri-regular.ttf', fontUint8Array);
+        doc.addFileToVFS('amiri-regular.ttf', fontData);
         doc.addFont('amiri-regular.ttf', 'Amiri', 'normal');
         doc.setFont('Amiri');
     } catch (error) {
@@ -518,6 +491,7 @@ async function exportDailyReport() {
     doc.save(`تقرير_يومي_${today}.pdf`);
 }
 
+// تصدير تقرير شهري PDF
 async function exportMonthlyReport() {
     if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لتصدير التقارير!');
     const { jsPDF } = window.jspdf;
@@ -527,8 +501,7 @@ async function exportMonthlyReport() {
         const response = await fetch(fontUrl);
         if (!response.ok) throw new Error('فشل تحميل الخط');
         const fontData = await response.arrayBuffer();
-        const fontUint8Array = new Uint8Array(fontData);
-        doc.addFileToVFS('amiri-regular.ttf', fontUint8Array);
+        doc.addFileToVFS('amiri-regular.ttf', fontData);
         doc.addFont('amiri-regular.ttf', 'Amiri', 'normal');
         doc.setFont('Amiri');
     } catch (error) {
@@ -577,7 +550,28 @@ async function exportMonthlyReport() {
     doc.save(`تقرير_شهري_${currentMonth}.pdf`);
 }
 
-async function setupSettingsListener() {
+// تصدير الأجهزة إلى Excel
+function exportDevicesExcel() {
+    if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لتصدير البيانات!');
+    const data = devices.map(device => ({
+        'الجهاز': device.name || 'غير متوفر',
+        'العميل': device.customer || 'غير متوفر',
+        'العطل': device.issue || 'غير متوفر',
+        'التواصل': device.contact || 'غير متوفر',
+        'سعر الصيانة': `${(device.price || 0).toFixed(2)} جنيه`,
+        'المدفوع': `${(device.paidAmount || 0).toFixed(2)} جنيه`,
+        'المتبقي': `${(device.remainingAmount || 0).toFixed(2)} جنيه`,
+        'التاريخ': device.date || 'غير متوفر',
+        'الحالة': device.status || 'غير متوفر'
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الأجهزة');
+    XLSX.writeFile(wb, 'قائمة_الأجهزة.xlsx');
+}
+
+// معالج الإعدادات
+function setupSettingsListener() {
     const settingsForm = document.getElementById('settingsForm');
     if (settingsForm) {
         settingsForm.addEventListener('submit', async e => {
@@ -609,9 +603,11 @@ async function setupSettingsListener() {
     }
 }
 
+// تطبيق الثيم
 function applyTheme() {
     if (theme === 'dark') {
         document.body.style.background = 'linear-gradient(135deg, #1a2a44, #2e4a7e)';
+        document.querySelectorAll('input, select, textarea').forEach(el => el.style.color = '#fff');
     } else if (theme === 'light') {
         document.body.style.background = 'linear-gradient(135deg, #e0e7ff, #c7d2fe)';
         document.querySelectorAll('input, select, textarea').forEach(el => el.style.color = '#333');
@@ -621,263 +617,19 @@ function applyTheme() {
     }
 }
 
+// تحديث التاريخ والوقت
 function updateDateTime() {
     const now = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
     document.getElementById('dateTime').textContent = `اليوم: ${now}`;
+    setTimeout(updateDateTime, 60000);
 }
 
-function restrictAccess(role) {
-    if (role !== 'admin') {
-        document.querySelector('a[onclick="showSection(\'add-device\')"]').parentElement.style.display = 'none';
-        document.querySelector('a[onclick="showSection(\'reports\')"]').parentElement.style.display = 'none';
-        document.querySelector('a[onclick="showSection(\'settings\')"]').parentElement.style.display = 'none';
-        document.getElementById('add-device').style.display = 'none';
-        document.getElementById('reports').style.display = 'none';
-        document.getElementById('settings').style.display = 'none';
-    } else {
-        document.querySelector('a[onclick="showSection(\'add-device\')"]').parentElement.style.display = 'block';
-        document.querySelector('a[onclick="showSection(\'reports\')"]').parentElement.style.display = 'block';
-        document.querySelector('a[onclick="showSection(\'settings\')"]').parentElement.style.display = 'block';
-        document.getElementById('add-device').style.display = 'block';
-        document.getElementById('reports').style.display = 'block';
-        document.getElementById('settings').style.display = 'block';
-    }
+// تعيين المستخدم الحالي
+export function setCurrentUser(user) {
+    currentUser = user;
+    updateDeviceList();
+    updateStats();
 }
 
-function logout() {
-    signOut(auth).then(() => {
-        currentUser = null;
-        devices = [];
-        users = [];
-        const loginModal = document.getElementById('loginModal');
-        const sidebar = document.getElementById('sidebar');
-        const menuToggle = document.querySelector('.menu-toggle');
-        if (loginModal) loginModal.style.display = 'flex';
-        if (sidebar) sidebar.classList.add('closed');
-        if (menuToggle) menuToggle.style.display = 'none';
-        document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) loginForm.reset();
-        const devicesList = document.getElementById('devicesList');
-        if (devicesList) devicesList.innerHTML = '';
-        const usersList = document.getElementById('usersList');
-        if (usersList) usersList.innerHTML = '';
-        closeEditDeviceModal();
-        closeInvoice();
-    }).catch(error => {
-        console.error('Error signing out:', error);
-        alert('حدث خطأ أثناء تسجيل الخروج.');
-    });
-}
-
-async function setupAddUserListener() {
-    const addUserForm = document.getElementById('addUserForm');
-    if (addUserForm) {
-        addUserForm.addEventListener('submit', async e => {
-            e.preventDefault();
-            if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لإضافة مستخدم!');
-            const username = document.getElementById('newUsername').value.trim();
-            const password = document.getElementById('newPassword').value;
-            const role = document.getElementById('newRole').value;
-            if (username && password && role) {
-                try {
-                    const userCredential = await createUserWithEmailAndPassword(auth, `${username}@example.com`, password);
-                    await setDoc(doc(db, 'users', userCredential.user.uid), {
-                        username,
-                        role,
-                        email: `${username}@example.com`
-                    });
-                    users.push({ uid: userCredential.user.uid, username, role });
-                    updateUsersList();
-                    addUserForm.reset();
-                    alert('تم إضافة المستخدم بنجاح!');
-                } catch (error) {
-                    console.error('Error adding user:', error);
-                    alert('حدث خطأ أثناء إضافة المستخدم.');
-                }
-            } else {
-                alert('يرجى ملء جميع الحقول!');
-            }
-        });
-    }
-}
-
-async function updateUsersList() {
-    const usersList = document.getElementById('usersList');
-    if (usersList) {
-        usersList.innerHTML = '';
-        users.forEach(user => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${user.username}</td>
-                <td>${user.role === 'admin' ? 'أدمن' : 'مستخدم'}</td>
-                <td><button class="danger-button" onclick="deleteUser('${user.uid}')">حذف</button></td>
-            `;
-            usersList.appendChild(row);
-        });
-    }
-}
-
-async function deleteUser(uid) {
-    if (uid === auth.currentUser?.uid) return alert('لا يمكن حذف حسابك الحالي!');
-    if (confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
-        try {
-            await deleteDoc(doc(db, 'users', uid));
-            users = users.filter(u => u.uid !== uid);
-            updateUsersList();
-            alert('تم حذف المستخدم بنجاح!');
-        } catch (error) {
-            console.error('Error deleting user:', error);
-            alert('حدث خطأ أثناء حذف المستخدم.');
-        }
-    }
-}
-
-async function setupLoginListener() {
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async e => {
-            e.preventDefault();
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('errorMessage');
-            if (username && password) {
-                try {
-                    const userCredential = await signInWithEmailAndPassword(auth, `${username}@example.com`, password);
-                    const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-                    if (userDoc.exists()) {
-                        currentUser = { uid: userCredential.user.uid, ...userDoc.data() };
-                        const loginModal = document.getElementById('loginModal');
-                        const sidebar = document.getElementById('sidebar');
-                        const menuToggle = document.querySelector('.menu-toggle');
-                        if (loginModal) loginModal.style.display = 'none';
-                        if (sidebar) sidebar.classList.remove('closed');
-                        if (menuToggle) {
-                            menuToggle.style.display = 'block';
-                            menuToggle.textContent = '✖';
-                        }
-                        document.getElementById('mainContent').classList.remove('full');
-                        restrictAccess(currentUser.role);
-                        await loadDevices();
-                        await loadUsers();
-                        updateDeviceList();
-                        updateStats();
-                        updateUsersList();
-                        showSection('dashboard');
-                        loginForm.reset();
-                        if (errorMessage) errorMessage.style.display = 'none';
-                    } else {
-                        if (errorMessage) {
-                            errorMessage.style.display = 'block';
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error logging in:', error);
-                    if (errorMessage) {
-                        errorMessage.style.display = 'block';
-                    }
-                }
-            } else {
-                alert('يرجى ملء جميع الحقول!');
-            }
-        });
-    }
-}
-
-async function loadDevices() {
-    try {
-        const devicesSnapshot = await getDocs(query(collection(db, 'devices'), orderBy('createdAt', 'desc')));
-        devices = devicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        updateDeviceList();
-        updateStats();
-    } catch (error) {
-        console.error('Error loading devices:', error);
-        alert('حدث خطأ أثناء تحميل الأجهزة.');
-    }
-}
-
-async function loadUsers() {
-    try {
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        users = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-        updateUsersList();
-    } catch (error) {
-        console.error('Error loading users:', error);
-        alert('حدث خطأ أثناء تحميل المستخدمين.');
-    }
-}
-
-function initApp() {
-    initUsers();
-    setupAddDeviceListener();
-    setupEditDeviceListener();
-    setupSearchListener();
-    setupSettingsListener();
-    setupAddUserListener();
-    setupLoginListener();
-    updateDateTime();
-    setInterval(updateDateTime, 60000);
-    applyTheme();
-
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists()) {
-                currentUser = { uid: user.uid, ...userDoc.data() };
-                const loginModal = document.getElementById('loginModal');
-                const sidebar = document.getElementById('sidebar');
-                const menuToggle = document.querySelector('.menu-toggle');
-                if (loginModal) loginModal.style.display = 'none';
-                if (sidebar) sidebar.classList.remove('closed');
-                if (menuToggle) {
-                    menuToggle.style.display = 'block';
-                    menuToggle.textContent = '✖';
-                }
-                document.getElementById('mainContent').classList.remove('full');
-                restrictAccess(currentUser.role);
-                await loadDevices();
-                await loadUsers();
-                updateDeviceList();
-                updateStats();
-                updateUsersList();
-                showSection('dashboard');
-            } else {
-                logout();
-            }
-        } else {
-            logout();
-        }
-    });
-
-    const shopSettings = await getDoc(doc(db, 'settings', 'shop'));
-    if (shopSettings.exists()) {
-        const data = shopSettings.data();
-        shopName = data.shopName || shopName;
-        shopContact = data.shopContact || shopContact;
-        theme = data.theme || theme;
-        document.getElementById('shopName').value = shopName;
-        document.getElementById('shopContact').value = shopContact;
-        document.getElementById('theme').value = theme;
-        localStorage.setItem('shopName', shopName);
-        localStorage.setItem('shopContact', shopContact);
-        localStorage.setItem('theme', theme);
-        applyTheme();
-    }
-}
-
-document.addEventListener('DOMContentLoaded', initApp);
-
-// Expose functions to global scope for inline event handlers
-window.toggleSidebar = toggleSidebar;
-window.showSection = showSection;
-window.logout = logout;
-window.resetSearch = resetSearch;
-window.editDevice = editDevice;
-window.deleteDevice = deleteDevice;
-window.generateInvoice = generateInvoice;
-window.closeEditDeviceModal = closeEditDeviceModal;
-window.closeInvoice = closeInvoice;
-window.downloadInvoicePDF = downloadInvoicePDF;
-window.exportDailyReport = exportDailyReport;
-window.exportMonthlyReport = exportMonthlyReport;
-window.deleteUser = deleteUser;
+// تصدير الدوال العامة
+export { toggleSidebar, showSection, initApp, loadDevices };
