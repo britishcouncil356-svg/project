@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام إدارة صيانة الأجهزة</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js" defer></script>
+    <script src="auth.js" type="module" defer></script>
+    <script src="script.js" type="module" defer></script>
     <style>
         * {
             margin: 0;
@@ -188,7 +197,7 @@
         button:hover {
             background: #00a1a7;
         }
-        .devices-table, .stats-table {
+        .devices-table, .stats-table, .users-table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0 1vh;
@@ -196,19 +205,19 @@
             overflow-x: auto;
             display: block;
         }
-        .devices-table th, .devices-table td, .stats-table th, .stats-table td {
+        .devices-table th, .devices-table td, .stats-table th, .stats-table td, .users-table th, .users-table td {
             padding: 1vh 1vw;
             text-align: center;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 0.5rem;
             font-size: clamp(0.8rem, 1.8vw, 0.9rem);
         }
-        .devices-table th, .stats-table th {
+        .devices-table th, .stats-table th, .users-table th {
             background: #3498db;
             color: #fff;
             text-transform: uppercase;
         }
-        .devices-table td button {
+        .devices-table td button, .users-table td button {
             padding: 0.8vh 1.5vw;
             margin: 0 0.5vw;
             font-size: clamp(0.8rem, 1.8vw, 0.9rem);
@@ -308,31 +317,6 @@
         }
         .danger-button:hover {
             background: #c0392b;
-        }
-        .users-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 1vh;
-            margin-top: 2vh;
-            overflow-x: auto;
-            display: block;
-        }
-        .users-table th, .users-table td {
-            padding: 1vh 1vw;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 0.5rem;
-            font-size: clamp(0.8rem, 1.8vw, 0.9rem);
-        }
-        .users-table th {
-            background: #3498db;
-            color: #fff;
-            text-transform: uppercase;
-        }
-        .users-table td button {
-            padding: 0.8vh 1.5vw;
-            margin: 0 0.5vw;
-            font-size: clamp(0.8rem, 1.8vw, 0.9rem);
         }
         @media (max-width: 1024px) {
             .sidebar {
@@ -435,15 +419,10 @@
             }
         }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script src="script.js" type="module"></script>
 </head>
 <body>
     <button class="menu-toggle" onclick="toggleSidebar()">✖</button>
-    <div class="sidebar" id="sidebar">
+    <div class="sidebar closed" id="sidebar">
         <h2>لوحة التحكم</h2>
         <ul>
             <li><a href="#" onclick="showSection('dashboard');"><i>🏠</i> الرئيسية</a></li>
@@ -455,7 +434,7 @@
         </ul>
     </div>
 
-    <div class="main-content" id="mainContent">
+    <div class="main-content full" id="mainContent">
         <div class="header">
             <h1>نظام إدارة صيانة الأجهزة</h1>
             <div class="date-time" id="dateTime"></div>
@@ -567,6 +546,7 @@
                 </thead>
                 <tbody id="devicesList"></tbody>
             </table>
+            <button onclick="exportDevicesExcel()">تصدير الأجهزة Excel</button>
         </div>
 
         <div id="reports" class="section">
@@ -677,7 +657,7 @@
             </div>
         </div>
 
-        <div id="loginModal" class="modal">
+        <div id="loginModal" class="modal" style="display: flex;">
             <div class="modal-content">
                 <span class="close" onclick="document.getElementById('loginModal').style.display='none'">&times;</span>
                 <h2>تسجيل الدخول</h2>
