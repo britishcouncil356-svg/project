@@ -376,6 +376,7 @@
                         role: 'admin',
                         email: 'admin@example.com'
                     });
+                    console.log('Default admin created');
                 } catch (error) {
                     console.error('Error creating default admin:', error);
                 }
@@ -394,6 +395,9 @@
         function showSection(sectionId) {
             document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
             document.getElementById(sectionId).classList.add('active');
+            if (sectionId === 'devices') {
+                updateDeviceList(); // تحديث قائمة الأجهزة عند عرض القسم
+            }
         }
 
         async function setupAddDeviceListener() {
@@ -447,33 +451,47 @@
 
         async function updateDeviceList(searchTerm = '') {
             const devicesList = document.getElementById('devicesList');
+            console.log('Updating device list with devices:', devices);
             if (devicesList) {
                 devicesList.innerHTML = '';
-                let filteredDevices = devices.filter(device =>
-                    device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    device.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    device.contact.includes(searchTerm)
-                );
-                filteredDevices.forEach(device => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${device.name}</td>
-                        <td>${device.customer}</td>
-                        <td>${device.issue}</td>
-                        <td>${device.contact}</td>
-                        <td>${device.price.toFixed(2)} جنيه</td>
-                        <td>${device.paidAmount.toFixed(2)} جنيه</td>
-                        <td>${device.remainingAmount.toFixed(2)} جنيه</td>
-                        <td>${device.date}</td>
-                        <td>${device.status}</td>
-                        <td>
-                            <button onclick="generateInvoice('${device.id}')">فاتورة</button>
-                            ${currentUser?.role === 'admin' ? `<button onclick="editDevice('${device.id}')">تعديل</button>` : ''}
-                            ${currentUser?.role === 'admin' ? `<button onclick="deleteDevice('${device.id}')">حذف</button>` : ''}
-                        </td>
-                    `;
-                    devicesList.appendChild(row);
+                let filteredDevices = devices.filter(device => {
+                    // التحقق من وجود الحقول لتجنب الأخطاء
+                    const name = device.name || '';
+                    const customer = device.customer || '';
+                    const contact = device.contact || '';
+                    return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           contact.includes(searchTerm);
                 });
+                console.log('Filtered devices:', filteredDevices);
+                if (filteredDevices.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="10">لا توجد أجهزة لعرضها</td>`;
+                    devicesList.appendChild(row);
+                } else {
+                    filteredDevices.forEach(device => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${device.name || 'غير متوفر'}</td>
+                            <td>${device.customer || 'غير متوفر'}</td>
+                            <td>${device.issue || 'غير متوفر'}</td>
+                            <td>${device.contact || 'غير متوفر'}</td>
+                            <td>${(device.price || 0).toFixed(2)} جنيه</td>
+                            <td>${(device.paidAmount || 0).toFixed(2)} جنيه</td>
+                            <td>${(device.remainingAmount || 0).toFixed(2)} جنيه</td>
+                            <td>${device.date || 'غير متوفر'}</td>
+                            <td>${device.status || 'غير متوفر'}</td>
+                            <td>
+                                <button onclick="generateInvoice('${device.id}')">فاتورة</button>
+                                ${currentUser?.role === 'admin' ? `<button onclick="editDevice('${device.id}')">تعديل</button>` : ''}
+                                ${currentUser?.role === 'admin' ? `<button onclick="deleteDevice('${device.id}')">حذف</button>` : ''}
+                            </td>
+                        `;
+                        devicesList.appendChild(row);
+                    });
+                }
+            } else {
+                console.error('Devices list element not found');
             }
         }
 
@@ -482,13 +500,13 @@
             const device = devices.find(d => d.id === id);
             if (device) {
                 document.getElementById('editDeviceId').value = device.id;
-                document.getElementById('editDeviceName').value = device.name;
-                document.getElementById('editCustomerName').value = device.customer;
-                document.getElementById('editIssue').value = device.issue;
-                document.getElementById('editContact').value = device.contact;
-                document.getElementById('editPrice').value = device.price;
-                document.getElementById('editPaidAmount').value = device.paidAmount;
-                document.getElementById('editStatus').value = device.status;
+                document.getElementById('editDeviceName').value = device.name || '';
+                document.getElementById('editCustomerName').value = device.customer || '';
+                document.getElementById('editIssue').value = device.issue || '';
+                document.getElementById('editContact').value = device.contact || '';
+                document.getElementById('editPrice').value = device.price || 0;
+                document.getElementById('editPaidAmount').value = device.paidAmount || 0;
+                document.getElementById('editStatus').value = device.status || 'في الانتظار';
                 document.getElementById('editDeviceModal').style.display = 'flex';
             }
         }
@@ -547,7 +565,11 @@
         function setupSearchListener() {
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
-                searchInput.addEventListener('input', () => updateDeviceList(searchInput.value.trim()));
+                searchInput.addEventListener('input', () => {
+                    updateDeviceList(searchInput.value.trim());
+                });
+                // إعادة تعيين حقل البحث عند تحميل الصفحة
+                searchInput.value = '';
             }
         }
 
@@ -574,15 +596,15 @@
                 const invoiceContent = `
                     <h2>فاتورة صيانة - ${shopName}</h2>
                     <p><strong>رقم المتجر:</strong> ${shopContact}</p>
-                    <p><strong>اسم الجهاز:</strong> ${device.name}</p>
-                    <p><strong>اسم العميل:</strong> ${device.customer}</p>
-                    <p><strong>وصف العطل:</strong> ${device.issue}</p>
-                    <p><strong>رقم التواصل:</strong> ${device.contact}</p>
-                    <p><strong>سعر الصيانة:</strong> ${device.price.toFixed(2)} جنيه</p>
-                    <p><strong>المبلغ المدفوع:</strong> ${device.paidAmount.toFixed(2)} جنيه</p>
-                    <p><strong>المبلغ المتبقي:</strong> ${device.remainingAmount.toFixed(2)} جنيه</p>
-                    <p><strong>التاريخ:</strong> ${device.date}</p>
-                    <p><strong>الحالة:</strong> ${device.status}</p>
+                    <p><strong>اسم الجهاز:</strong> ${device.name || 'غير متوفر'}</p>
+                    <p><strong>اسم العميل:</strong> ${device.customer || 'غير متوفر'}</p>
+                    <p><strong>وصف العطل:</strong> ${device.issue || 'غير متوفر'}</p>
+                    <p><strong>رقم التواصل:</strong> ${device.contact || 'غير متوفر'}</p>
+                    <p><strong>سعر الصيانة:</strong> ${(device.price || 0).toFixed(2)} جنيه</p>
+                    <p><strong>المبلغ المدفوع:</strong> ${(device.paidAmount || 0).toFixed(2)} جنيه</p>
+                    <p><strong>المبلغ المتبقي:</strong> ${(device.remainingAmount || 0).toFixed(2)} جنيه</p>
+                    <p><strong>التاريخ:</strong> ${device.date || 'غير متوفر'}</p>
+                    <p><strong>الحالة:</strong> ${device.status || 'غير متوفر'}</p>
                     <p>شكراً لاختياركم خدماتنا!</p>
                 `;
                 document.getElementById('invoiceContent').innerHTML = invoiceContent;
@@ -616,15 +638,15 @@
 
             doc.text(`فاتورة صيانة - ${shopName}`, xRight, yStart, { align: 'right' });
             doc.text(`رقم المتجر: ${shopContact}`, xRight, yStart + 10, { align: 'right' });
-            doc.text(`اسم الجهاز: ${currentInvoiceDevice.name}`, xRight, yStart + 20, { align: 'right' });
-            doc.text(`اسم العميل: ${currentInvoiceDevice.customer}`, xRight, yStart + 30, { align: 'right' });
-            doc.text(`وصف العطل: ${currentInvoiceDevice.issue}`, xRight, yStart + 40, { align: 'right' });
-            doc.text(`رقم التواصل: ${currentInvoiceDevice.contact}`, xRight, yStart + 50, { align: 'right' });
-            doc.text(`سعر الصيانة: ${currentInvoiceDevice.price.toFixed(2)} جنيه`, xRight, yStart + 60, { align: 'right' });
-            doc.text(`المبلغ المدفوع: ${currentInvoiceDevice.paidAmount.toFixed(2)} جنيه`, xRight, yStart + 70, { align: 'right' });
-            doc.text(`المبلغ المتبقي: ${currentInvoiceDevice.remainingAmount.toFixed(2)} جنيه`, xRight, yStart + 80, { align: 'right' });
-            doc.text(`التاريخ: ${currentInvoiceDevice.date}`, xRight, yStart + 90, { align: 'right' });
-            doc.text(`الحالة: ${currentInvoiceDevice.status}`, xRight, yStart + 100, { align: 'right' });
+            doc.text(`اسم الجهاز: ${currentInvoiceDevice.name || 'غير متوفر'}`, xRight, yStart + 20, { align: 'right' });
+            doc.text(`اسم العميل: ${currentInvoiceDevice.customer || 'غير متوفر'}`, xRight, yStart + 30, { align: 'right' });
+            doc.text(`وصف العطل: ${currentInvoiceDevice.issue || 'غير متوفر'}`, xRight, yStart + 40, { align: 'right' });
+            doc.text(`رقم التواصل: ${currentInvoiceDevice.contact || 'غير متوفر'}`, xRight, yStart + 50, { align: 'right' });
+            doc.text(`سعر الصيانة: ${(currentInvoiceDevice.price || 0).toFixed(2)} جنيه`, xRight, yStart + 60, { align: 'right' });
+            doc.text(`المبلغ المدفوع: ${(currentInvoiceDevice.paidAmount || 0).toFixed(2)} جنيه`, xRight, yStart + 70, { align: 'right' });
+            doc.text(`المبلغ المتبقي: ${(currentInvoiceDevice.remainingAmount || 0).toFixed(2)} جنيه`, xRight, yStart + 80, { align: 'right' });
+            doc.text(`التاريخ: ${currentInvoiceDevice.date || 'غير متوفر'}`, xRight, yStart + 90, { align: 'right' });
+            doc.text(`الحالة: ${currentInvoiceDevice.status || 'غير متوفر'}`, xRight, yStart + 100, { align: 'right' });
             doc.text('شكراً لاختياركم خدماتنا!', xRight, yStart + 110, { align: 'right' });
 
             doc.save(`فاتورة_${currentInvoiceDevice.id}.pdf`);
@@ -636,15 +658,16 @@
         }
 
         function updateStats() {
+            console.log('Updating stats with devices:', devices);
             document.getElementById('totalDevices').textContent = devices.length;
-            const totalRevenue = devices.reduce((sum, device) => sum + device.paidAmount, 0);
+            const totalRevenue = devices.reduce((sum, device) => sum + (device.paidAmount || 0), 0);
             document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2);
-            const totalRemaining = devices.reduce((sum, device) => sum + device.remainingAmount, 0);
+            const totalRemaining = devices.reduce((sum, device) => sum + (device.remainingAmount || 0), 0);
             document.getElementById('totalRemaining').textContent = totalRemaining.toFixed(2);
             const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
-            const dailyDevices = devices.filter(d => d.date.includes(today)).length;
-            const dailyRevenue = devices.filter(d => d.date.includes(today)).reduce((sum, d) => sum + d.paidAmount, 0);
-            const dailyRemaining = devices.filter(d => d.date.includes(today)).reduce((sum, d) => sum + d.remainingAmount, 0);
+            const dailyDevices = devices.filter(d => d.date?.includes(today)).length;
+            const dailyRevenue = devices.filter(d => d.date?.includes(today)).reduce((sum, d) => sum + (d.paidAmount || 0), 0);
+            const dailyRemaining = devices.filter(d => d.date?.includes(today)).reduce((sum, d) => sum + (d.remainingAmount || 0), 0);
             document.getElementById('dailyDevices').textContent = dailyDevices;
             document.getElementById('dailyRevenue').textContent = dailyRevenue.toFixed(2);
             document.getElementById('dailyRemaining').textContent = dailyRemaining.toFixed(2);
@@ -682,16 +705,16 @@
             doc.text(`المبلغ المتبقي: ${document.getElementById('dailyRemaining').textContent} جنيه`, xRight, 60, { align: 'right' });
 
             const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
-            const dailyDevices = devices.filter(d => d.date.includes(today)).map(d => [
-                d.name,
-                d.customer,
-                d.issue,
-                d.contact,
-                `${d.price.toFixed(2)} جنيه`,
-                `${d.paidAmount.toFixed(2)} جنيه`,
-                `${d.remainingAmount.toFixed(2)} جنيه`,
-                d.date,
-                d.status
+            const dailyDevices = devices.filter(d => d.date?.includes(today)).map(d => [
+                d.name || 'غير متوفر',
+                d.customer || 'غير متوفر',
+                d.issue || 'غير متوفر',
+                d.contact || 'غير متوفر',
+                `${(d.price || 0).toFixed(2)} جنيه`,
+                `${(d.paidAmount || 0).toFixed(2)} جنيه`,
+                `${(d.remainingAmount || 0).toFixed(2)} جنيه`,
+                d.date || 'غير متوفر',
+                d.status || 'غير متوفر'
             ]);
 
             const head = [['الجهاز', 'العميل', 'العطل', 'التواصل', 'سعر الصيانة', 'المدفوع', 'المتبقي', 'التاريخ', 'الحالة']];
@@ -880,6 +903,7 @@
                                 if (menuToggle) menuToggle.style.display = 'block';
                                 restrictAccess(currentUser.role);
                                 await fetchData();
+                                updateDeviceList(); // تحديث قائمة الأجهزة بعد تسجيل الدخول
                                 updateStats();
                                 showSection('dashboard');
                                 if (errorMessage) errorMessage.style.display = 'none';
@@ -901,13 +925,14 @@
             try {
                 const q = query(collection(db, 'devices'), orderBy('createdAt', 'desc'));
                 const devicesSnapshot = await getDocs(q);
+                console.log('Devices Snapshot:', devicesSnapshot.docs);
                 devices = devicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+                console.log('Devices Array:', devices);
+                updateDeviceList(); // تحديث قائمة الأجهزة بعد جلب البيانات
                 if (currentUser?.role === 'admin') {
                     const usersSnapshot = await getDocs(collection(db, 'users'));
                     users = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
                 }
-
                 const settingsDoc = await getDoc(doc(db, 'settings', 'shop'));
                 if (settingsDoc.exists()) {
                     const settings = settingsDoc.data();
@@ -922,6 +947,7 @@
                     if (themeInput) themeInput.value = theme;
                 }
                 applyTheme();
+                updateStats();
             } catch (error) {
                 console.error('Error fetching data:', error);
                 alert('حدث خطأ أثناء جلب البيانات.');
@@ -954,6 +980,7 @@
                         if (menuToggle) menuToggle.style.display = 'block';
                         restrictAccess(currentUser.role);
                         await fetchData();
+                        updateDeviceList(); // تحديث قائمة الأجهزة بعد تسجيل الدخول
                         updateStats();
                         showSection('dashboard');
                     } else {
@@ -1053,6 +1080,7 @@
             <h2>قائمة الأجهزة</h2>
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="ابحث عن جهاز (اسم، عميل، رقم تواصل)">
+                <button onclick="document.getElementById('searchInput').value = ''; updateDeviceList('');">إعادة تعيين</button>
             </div>
             <table class="devices-table">
                 <thead>
