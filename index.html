@@ -182,19 +182,19 @@
         button:hover {
             background: #00a1a7;
         }
-        .devices-table, .users-table {
+        .devices-table, .users-table, .stats-table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0 10px;
             margin-top: 20px;
         }
-        .devices-table th, .devices-table td, .users-table th, .users-table td {
+        .devices-table th, .devices-table td, .users-table th, .users-table td, .stats-table th, .stats-table td {
             padding: 15px;
             text-align: center;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
         }
-        .devices-table th, .users-table th {
+        .devices-table th, .users-table th, .stats-table th {
             background: #3498db;
             color: #fff;
             text-transform: uppercase;
@@ -248,6 +248,8 @@
         }
         .search-bar {
             margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
         }
         .search-bar input {
             width: 100%;
@@ -260,6 +262,35 @@
         .search-bar input:focus {
             background: rgba(255, 255, 255, 0.3);
             box-shadow: 0 0 10px rgba(0, 196, 204, 0.5);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-card span {
+            font-size: 1.5rem;
+            color: #00c4cc;
+            font-weight: bold;
+        }
+        .report-section {
+            margin-top: 30px;
+        }
+        .report-section h3 {
+            margin-bottom: 20px;
+            color: #00c4cc;
         }
         @media (max-width: 768px) {
             .sidebar {
@@ -277,6 +308,9 @@
             .modal-content {
                 width: 90%;
                 max-height: 70vh;
+            }
+            .stats {
+                grid-template-columns: 1fr;
             }
         }
         @media (max-width: 480px) {
@@ -396,7 +430,9 @@
             document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
             document.getElementById(sectionId).classList.add('active');
             if (sectionId === 'devices') {
-                updateDeviceList(); // تحديث قائمة الأجهزة عند عرض القسم
+                updateDeviceList();
+            } else if (sectionId === 'reports') {
+                updateStats();
             }
         }
 
@@ -455,7 +491,6 @@
             if (devicesList) {
                 devicesList.innerHTML = '';
                 let filteredDevices = devices.filter(device => {
-                    // التحقق من وجود الحقول لتجنب الأخطاء
                     const name = device.name || '';
                     const customer = device.customer || '';
                     const contact = device.contact || '';
@@ -568,7 +603,6 @@
                 searchInput.addEventListener('input', () => {
                     updateDeviceList(searchInput.value.trim());
                 });
-                // إعادة تعيين حقل البحث عند تحميل الصفحة
                 searchInput.value = '';
             }
         }
@@ -659,21 +693,99 @@
 
         function updateStats() {
             console.log('Updating stats with devices:', devices);
+            // Total stats
             document.getElementById('totalDevices').textContent = devices.length;
             const totalRevenue = devices.reduce((sum, device) => sum + (device.paidAmount || 0), 0);
             document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2);
             const totalRemaining = devices.reduce((sum, device) => sum + (device.remainingAmount || 0), 0);
             document.getElementById('totalRemaining').textContent = totalRemaining.toFixed(2);
+
+            // Daily stats
             const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
-            const dailyDevices = devices.filter(d => d.date?.includes(today)).length;
-            const dailyRevenue = devices.filter(d => d.date?.includes(today)).reduce((sum, d) => sum + (d.paidAmount || 0), 0);
-            const dailyRemaining = devices.filter(d => d.date?.includes(today)).reduce((sum, d) => sum + (d.remainingAmount || 0), 0);
-            document.getElementById('dailyDevices').textContent = dailyDevices;
+            const dailyDevices = devices.filter(d => d.date?.includes(today));
+            const dailyDeviceCount = dailyDevices.length;
+            const dailyRevenue = dailyDevices.reduce((sum, d) => sum + (d.paidAmount || 0), 0);
+            const dailyRemaining = dailyDevices.reduce((sum, d) => sum + (d.remainingAmount || 0), 0);
+            document.getElementById('dailyDevices').textContent = dailyDeviceCount;
             document.getElementById('dailyRevenue').textContent = dailyRevenue.toFixed(2);
             document.getElementById('dailyRemaining').textContent = dailyRemaining.toFixed(2);
+
+            // Monthly stats
+            const currentMonth = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', month: 'long', year: 'numeric' });
+            const monthlyDevices = devices.filter(d => d.date?.includes(currentMonth.split(' ')[0]));
+            const monthlyDeviceCount = monthlyDevices.length;
+            const monthlyRevenue = monthlyDevices.reduce((sum, d) => sum + (d.paidAmount || 0), 0);
+            const monthlyRemaining = monthlyDevices.reduce((sum, d) => sum + (d.remainingAmount || 0), 0);
+            document.getElementById('monthlyDevices').textContent = monthlyDeviceCount;
+            document.getElementById('monthlyRevenue').textContent = monthlyRevenue.toFixed(2);
+            document.getElementById('monthlyRemaining').textContent = monthlyRemaining.toFixed(2);
+
+            // Update reports section tables
+            updateReportsTables();
         }
 
-        async function exportReport() {
+        function updateReportsTables() {
+            const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
+            const currentMonth = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', month: 'long', year: 'numeric' }).split(' ')[0];
+
+            // Daily devices table
+            const dailyDevicesList = document.getElementById('dailyDevicesList');
+            if (dailyDevicesList) {
+                dailyDevicesList.innerHTML = '';
+                const dailyDevices = devices.filter(d => d.date?.includes(today));
+                if (dailyDevices.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="9">لا توجد أجهزة لهذا اليوم</td>`;
+                    dailyDevicesList.appendChild(row);
+                } else {
+                    dailyDevices.forEach(device => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${device.name || 'غير متوفر'}</td>
+                            <td>${device.customer || 'غير متوفر'}</td>
+                            <td>${device.issue || 'غير متوفر'}</td>
+                            <td>${device.contact || 'غير متوفر'}</td>
+                            <td>${(device.price || 0).toFixed(2)} جنيه</td>
+                            <td>${(device.paidAmount || 0).toFixed(2)} جنيه</td>
+                            <td>${(device.remainingAmount || 0).toFixed(2)} جنيه</td>
+                            <td>${device.date || 'غير متوفر'}</td>
+                            <td>${device.status || 'غير متوفر'}</td>
+                        `;
+                        dailyDevicesList.appendChild(row);
+                    });
+                }
+            }
+
+            // Monthly devices table
+            const monthlyDevicesList = document.getElementById('monthlyDevicesList');
+            if (monthlyDevicesList) {
+                monthlyDevicesList.innerHTML = '';
+                const monthlyDevices = devices.filter(d => d.date?.includes(currentMonth));
+                if (monthlyDevices.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="9">لا توجد أجهزة لهذا الشهر</td>`;
+                    monthlyDevicesList.appendChild(row);
+                } else {
+                    monthlyDevices.forEach(device => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${device.name || 'غير متوفر'}</td>
+                            <td>${device.customer || 'غير متوفر'}</td>
+                            <td>${device.issue || 'غير متوفر'}</td>
+                            <td>${device.contact || 'غير متوفر'}</td>
+                            <td>${(device.price || 0).toFixed(2)} جنيه</td>
+                            <td>${(device.paidAmount || 0).toFixed(2)} جنيه</td>
+                            <td>${(device.remainingAmount || 0).toFixed(2)} جنيه</td>
+                            <td>${device.date || 'غير متوفر'}</td>
+                            <td>${device.status || 'غير متوفر'}</td>
+                        `;
+                        monthlyDevicesList.appendChild(row);
+                    });
+                }
+            }
+        }
+
+        async function exportDailyReport() {
             if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لتصدير التقارير!');
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -697,12 +809,12 @@
             const xRight = pageWidth - 10;
             const yStart = 20;
 
-            doc.text(`تقرير يومي - ${shopName}`, xRight, 20, { align: 'right' });
+            doc.text(`تقرير يومي - ${shopName}`, xRight, yStart, { align: 'right' });
             doc.setFontSize(12);
-            doc.text(`التاريخ: ${new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' })}`, xRight, 30, { align: 'right' });
-            doc.text(`عدد الأجهزة: ${document.getElementById('dailyDevices').textContent}`, xRight, 40, { align: 'right' });
-            doc.text(`الإيرادات: ${document.getElementById('dailyRevenue').textContent} جنيه`, xRight, 50, { align: 'right' });
-            doc.text(`المبلغ المتبقي: ${document.getElementById('dailyRemaining').textContent} جنيه`, xRight, 60, { align: 'right' });
+            doc.text(`التاريخ: ${new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' })}`, xRight, yStart + 10, { align: 'right' });
+            doc.text(`عدد الأجهزة: ${document.getElementById('dailyDevices').textContent}`, xRight, yStart + 20, { align: 'right' });
+            doc.text(`الإيرادات: ${document.getElementById('dailyRevenue').textContent} جنيه`, xRight, yStart + 30, { align: 'right' });
+            doc.text(`المبلغ المتبقي: ${document.getElementById('dailyRemaining').textContent} جنيه`, xRight, yStart + 40, { align: 'right' });
 
             const today = new Date().toLocaleDateString('ar-EG', { timeZone: 'Africa/Cairo' });
             const dailyDevices = devices.filter(d => d.date?.includes(today)).map(d => [
@@ -723,13 +835,72 @@
             doc.autoTable({
                 head: head,
                 body: body,
-                startY: 70,
+                startY: yStart + 50,
                 styles: { font: 'Amiri', halign: 'right', fontSize: 10, cellPadding: 2 },
                 headStyles: { fillColor: [52, 152, 219], halign: 'center' },
                 margin: { right: 10, left: 10 }
             });
 
             doc.save(`تقرير_يومي_${today}.pdf`);
+        }
+
+        async function exportMonthlyReport() {
+            if (currentUser?.role !== 'admin') return alert('ليس لديك صلاحية لتصدير التقارير!');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const fontUrl = 'https://raw.githubusercontent.com/aliftype/amiri/main/fonts/amiri-regular.ttf';
+            try {
+                const response = await fetch(fontUrl);
+                if (!response.ok) throw new Error('فشل تحميل الخط');
+                const fontData = await response.arrayBuffer();
+                const fontUint8Array = new Uint8Array(fontData);
+                doc.addFileToVFS('amiri-regular.ttf', fontUint8Array);
+                doc.addFont('amiri-regular.ttf', 'Amiri', 'normal');
+                doc.setFont('Amiri');
+            } catch (error) {
+                console.error('خطأ في تحميل الخط:', error);
+                alert('حدث خطأ في تحميل خط Amiri. يرجى التأكد من الاتصال بالإنترنت.');
+                return;
+            }
+            doc.setFontSize(16);
+
+            const pageWidth = doc.internal.pageSize.width;
+            const xRight = pageWidth - 10;
+            const yStart = 20;
+
+            const currentMonth = new Date().toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', month: 'long', year: 'numeric' });
+            doc.text(`تقرير شهري - ${shopName}`, xRight, yStart, { align: 'right' });
+            doc.setFontSize(12);
+            doc.text(`الشهر: ${currentMonth}`, xRight, yStart + 10, { align: 'right' });
+            doc.text(`عدد الأجهزة: ${document.getElementById('monthlyDevices').textContent}`, xRight, yStart + 20, { align: 'right' });
+            doc.text(`الإيرادات: ${document.getElementById('monthlyRevenue').textContent} جنيه`, xRight, yStart + 30, { align: 'right' });
+            doc.text(`المبلغ المتبقي: ${document.getElementById('monthlyRemaining').textContent} جنيه`, xRight, yStart + 40, { align: 'right' });
+
+            const monthlyDevices = devices.filter(d => d.date?.includes(currentMonth.split(' ')[0])).map(d => [
+                d.name || 'غير متوفر',
+                d.customer || 'غير متوفر',
+                d.issue || 'غير متوفر',
+                d.contact || 'غير متوفر',
+                `${(d.price || 0).toFixed(2)} جنيه`,
+                `${(d.paidAmount || 0).toFixed(2)} جنيه`,
+                `${(d.remainingAmount || 0).toFixed(2)} جنيه`,
+                d.date || 'غير متوفر',
+                d.status || 'غير متوفر'
+            ]);
+
+            const head = [['الجهاز', 'العميل', 'العطل', 'التواصل', 'سعر الصيانة', 'المدفوع', 'المتبقي', 'التاريخ', 'الحالة']];
+            const body = monthlyDevices;
+
+            doc.autoTable({
+                head: head,
+                body: body,
+                startY: yStart + 50,
+                styles: { font: 'Amiri', halign: 'right', fontSize: 10, cellPadding: 2 },
+                headStyles: { fillColor: [52, 152, 219], halign: 'center' },
+                margin: { right: 10, left: 10 }
+            });
+
+            doc.save(`تقرير_شهري_${currentMonth}.pdf`);
         }
 
         async function setupSettingsListener() {
@@ -903,7 +1074,7 @@
                                 if (menuToggle) menuToggle.style.display = 'block';
                                 restrictAccess(currentUser.role);
                                 await fetchData();
-                                updateDeviceList(); // تحديث قائمة الأجهزة بعد تسجيل الدخول
+                                updateDeviceList();
                                 updateStats();
                                 showSection('dashboard');
                                 if (errorMessage) errorMessage.style.display = 'none';
@@ -928,7 +1099,7 @@
                 console.log('Devices Snapshot:', devicesSnapshot.docs);
                 devices = devicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 console.log('Devices Array:', devices);
-                updateDeviceList(); // تحديث قائمة الأجهزة بعد جلب البيانات
+                updateDeviceList();
                 if (currentUser?.role === 'admin') {
                     const usersSnapshot = await getDocs(collection(db, 'users'));
                     users = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
@@ -980,7 +1151,7 @@
                         if (menuToggle) menuToggle.style.display = 'block';
                         restrictAccess(currentUser.role);
                         await fetchData();
-                        updateDeviceList(); // تحديث قائمة الأجهزة بعد تسجيل الدخول
+                        updateDeviceList();
                         updateStats();
                         showSection('dashboard');
                     } else {
@@ -1002,7 +1173,8 @@
         window.generateInvoice = generateInvoice;
         window.downloadInvoicePDF = downloadInvoicePDF;
         window.closeInvoice = closeInvoice;
-        window.exportReport = exportReport;
+        window.exportDailyReport = exportDailyReport;
+        window.exportMonthlyReport = exportMonthlyReport;
         window.logout = logout;
         window.deleteUser = deleteUser;
     </script>
@@ -1031,9 +1203,42 @@
             <h2>لوحة التحكم</h2>
             <p>مرحبًا بك في نظام إدارة صيانة الأجهزة المستقبلي. استكشف الأقسام لإدارة عملك بكفاءة.</p>
             <div class="stats">
-                <div class="stat-card">الأجهزة المسجلة: <span id="totalDevices">0</span></div>
-                <div class="stat-card">الإيرادات الإجمالية: <span id="totalRevenue">0</span> جنيه</div>
-                <div class="stat-card">المبلغ المتبقي الإجمالي: <span id="totalRemaining">0</span> جنيه</div>
+                <div class="stat-card">
+                    <h3>إجمالي الأجهزة</h3>
+                    <span id="totalDevices">0</span>
+                </div>
+                <div class="stat-card">
+                    <h3>الإيرادات الإجمالية</h3>
+                    <span id="totalRevenue">0</span> جنيه
+                </div>
+                <div class="stat-card">
+                    <h3>المبلغ المتبقي الإجمالي</h3>
+                    <span id="totalRemaining">0</span> جنيه
+                </div>
+                <div class="stat-card">
+                    <h3>أجهزة اليوم</h3>
+                    <span id="dailyDevices">0</span>
+                </div>
+                <div class="stat-card">
+                    <h3>إيرادات اليوم</h3>
+                    <span id="dailyRevenue">0</span> جنيه
+                </div>
+                <div class="stat-card">
+                    <h3>المبلغ المتبقي اليوم</h3>
+                    <span id="dailyRemaining">0</span> جنيه
+                </div>
+                <div class="stat-card">
+                    <h3>أجهزة الشهر</h3>
+                    <span id="monthlyDevices">0</span>
+                </div>
+                <div class="stat-card">
+                    <h3>إيرادات الشهر</h3>
+                    <span id="monthlyRevenue">0</span> جنيه
+                </div>
+                <div class="stat-card">
+                    <h3>المبلغ المتبقي الشهر</h3>
+                    <span id="monthlyRemaining">0</span> جنيه
+                </div>
             </div>
         </div>
 
@@ -1103,13 +1308,56 @@
 
         <div id="reports" class="section">
             <h2>التقارير</h2>
-            <div class="report-card">
+            <div class="report-section">
                 <h3>إحصائيات اليوم</h3>
-                <p>عدد الأجهزة: <span id="dailyDevices">0</span></p>
-                <p>الإيرادات: <span id="dailyRevenue">0</span> جنيه</p>
-                <p>المبلغ المتبقي: <span id="dailyRemaining">0</span> جنيه</p>
+                <div class="stats">
+                    <div class="stat-card">عدد الأجهزة: <span id="dailyDevices">0</span></div>
+                    <div class="stat-card">الإيرادات: <span id="dailyRevenue">0</span> جنيه</div>
+                    <div class="stat-card">المبلغ المتبقي: <span id="dailyRemaining">0</span> جنيه</div>
+                </div>
+                <button onclick="exportDailyReport()">تصدير تقرير يومي PDF</button>
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>الجهاز</th>
+                            <th>العميل</th>
+                            <th>العطل</th>
+                            <th>التواصل</th>
+                            <th>سعر الصيانة</th>
+                            <th>المدفوع</th>
+                            <th>المتبقي</th>
+                            <th>التاريخ</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dailyDevicesList"></tbody>
+                </table>
             </div>
-            <button onclick="exportReport()">تصدير تقرير PDF</button>
+            <div class="report-section">
+                <h3>إحصائيات الشهر</h3>
+                <div class="stats">
+                    <div class="stat-card">عدد الأجهزة: <span id="monthlyDevices">0</span></div>
+                    <div class="stat-card">الإيرادات: <span id="monthlyRevenue">0</span> جنيه</div>
+                    <div class="stat-card">المبلغ المتبقي: <span id="monthlyRemaining">0</span> جنيه</div>
+                </div>
+                <button onclick="exportMonthlyReport()">تصدير تقرير شهري PDF</button>
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>الجهاز</th>
+                            <th>العميل</th>
+                            <th>العطل</th>
+                            <th>التواصل</th>
+                            <th>سعر الصيانة</th>
+                            <th>المدفوع</th>
+                            <th>المتبقي</th>
+                            <th>التاريخ</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyDevicesList"></tbody>
+                </table>
+            </div>
         </div>
 
         <div id="settings" class="section">
