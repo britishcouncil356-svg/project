@@ -505,8 +505,6 @@
                 updateDeviceList();
             } else if (sectionId === 'reports') {
                 updateStats();
-            } else if (sectionId === 'users') {
-                updateUsersList();
             }
         }
 
@@ -1048,11 +1046,9 @@
                 document.querySelector('a[onclick="showSection(\'add-device\')"]').parentElement.style.display = 'none';
                 document.querySelector('a[onclick="showSection(\'reports\')"]').parentElement.style.display = 'none';
                 document.querySelector('a[onclick="showSection(\'settings\')"]').parentElement.style.display = 'none';
-                document.querySelector('a[onclick="showSection(\'users\')"]').parentElement.style.display = 'none';
                 document.getElementById('add-device').style.display = 'none';
                 document.getElementById('reports').style.display = 'none';
                 document.getElementById('settings').style.display = 'none';
-                document.getElementById('users').style.display = 'none';
             }
         }
 
@@ -1283,7 +1279,6 @@
             <li><a href="#" onclick="showSection('devices');"><i>📋</i> قائمة الأجهزة</a></li>
             <li><a href="#" onclick="showSection('reports');"><i>📊</i> التقارير</a></li>
             <li><a href="#" onclick="showSection('settings');"><i>⚙️</i> الإعدادات</a></li>
-            <li><a href="#" onclick="showSection('users');"><i>👤</i> إدارة المستخدمين</a></li>
             <li><a href="#" onclick="logout()"><i>🚪</i> تسجيل الخروج</a></li>
         </ul>
     </div>
@@ -1508,20 +1503,6 @@
                     <tbody id="usersList"></tbody>
                 </table>
             </div>
-        </div>
-
-        <div id="users" class="section">
-            <h2>إدارة المستخدمين</h2>
-            <table class="users-table">
-                <thead>
-                    <tr>
-                        <th>اسم المستخدم</th>
-                        <th>الدور</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="usersList"></tbody>
-            </table>
         </div>
 
         <div id="loginModal" class="modal">
